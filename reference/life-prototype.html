@@ -1,0 +1,2034 @@
+<!doctype html>
+<html lang="zh-CN" data-colors="cn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>慢慢富起来？</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+<style>
+[hidden]{display:none!important}
+:root{
+  --bg:#e9efeb;--panel:#ffffff;--panel2:#f3f6f4;--line:#dbe3de;--line2:#c6d1ca;
+  --text:#1b2724;--muted:#5d6d67;--faint:#93a19b;
+  --acc:#2a7a67;--acc-soft:rgba(42,122,103,.12);--gold:#b07a0c;--gold-soft:rgba(214,158,40,.16);
+  --red:#d6404c;--green:#12935f;--warn:#dd7a0b;--info:#3a6fd1;
+  --bar-bg:#e3e9e5;
+  --term-bg:#f4f6fa;--term-panel:#ffffff;--term-line:#dde2ea;--term-text:#172033;--term-muted:#5f6b80;
+  --ma1:#a855f7;--ma2:#1d8fd6;
+  --shadow:0 1px 2px rgba(20,40,30,.05),0 2px 8px rgba(20,40,30,.05);
+  --rise:var(--red);--fall:var(--green);
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC","Noto Sans SC","Segoe UI",Roboto,sans-serif;
+  --display:"ZCOOL KuaiLe","PingFang SC","Microsoft YaHei",sans-serif;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#111715;--panel:#18201d;--panel2:#1f2925;--line:#27332e;--line2:#34433c;
+    --text:#e2ebe6;--muted:#9aaba3;--faint:#63746c;
+    --acc:#5fb8a2;--acc-soft:rgba(95,184,162,.14);--gold:#e0ad45;--gold-soft:rgba(224,173,69,.14);
+    --red:#f0555f;--green:#2fc58a;--warn:#ff9a2e;--info:#6d9bf0;--bar-bg:#26312c;
+    --term-bg:#0b111d;--term-panel:#101828;--term-line:#1d2940;--term-text:#dfe6f2;--term-muted:#8491aa;
+    --ma1:#c792ff;--ma2:#4db6ff;--shadow:none;color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#111715;--panel:#18201d;--panel2:#1f2925;--line:#27332e;--line2:#34433c;
+  --text:#e2ebe6;--muted:#9aaba3;--faint:#63746c;
+  --acc:#5fb8a2;--acc-soft:rgba(95,184,162,.14);--gold:#e0ad45;--gold-soft:rgba(224,173,69,.14);
+  --red:#f0555f;--green:#2fc58a;--warn:#ff9a2e;--info:#6d9bf0;--bar-bg:#26312c;
+  --term-bg:#0b111d;--term-panel:#101828;--term-line:#1d2940;--term-text:#dfe6f2;--term-muted:#8491aa;
+  --ma1:#c792ff;--ma2:#4db6ff;--shadow:none;color-scheme:dark;
+}
+:root[data-colors="west"]{--rise:var(--green);--fall:var(--red)}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px);background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--text);font:13.5px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.rise{color:var(--rise)!important}.fall{color:var(--fall)!important}.muted{color:var(--muted)}.warn{color:var(--warn)}
+.small{font-size:12px}.faint{color:var(--faint)}
+
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:8px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+.brand{font:22px/1 var(--display);color:var(--acc);white-space:nowrap}
+.clock{display:flex;align-items:baseline;gap:8px;white-space:nowrap}
+.clock b{font-size:14px}
+.money{display:flex;gap:14px;flex-wrap:wrap;margin-left:auto}
+.m-item{font-size:12px;color:var(--muted);white-space:nowrap}
+.m-item b{font:600 15px var(--mono);color:var(--text);margin-left:4px}
+.ctrl{display:flex;gap:6px;align-items:center}
+.badge{display:inline-block;min-width:17px;padding:0 5px;border-radius:9px;background:var(--red);color:#fff;font-size:11px;line-height:17px;text-align:center;margin-left:3px}
+.tabs{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--hdr-h,52px));z-index:35;display:flex;gap:2px;overflow-x:auto;padding:6px 12px 0;background:var(--bg);border-bottom:1px solid var(--line)}
+.tab{border:0;background:transparent;padding:8px 14px 9px;border-radius:8px 8px 0 0;color:var(--muted);font-weight:600;white-space:nowrap}
+.tab.on{background:var(--panel);color:var(--text);box-shadow:0 -1px 0 var(--line),1px 0 0 var(--line),-1px 0 0 var(--line)}
+.tab .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--warn);margin-left:5px;vertical-align:2px}
+.paused-bar{background:var(--gold-soft);color:var(--gold);text-align:center;font-size:12.5px;padding:5px 12px;border-bottom:1px solid var(--line)}
+main{max-width:1320px;margin:0 auto;padding:14px 14px 40px}
+.view{display:none}.view.on{display:block}
+
+/* common */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);min-width:0}
+.card>h3{margin:0;padding:11px 14px;border-bottom:1px solid var(--line);font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.card>h3 small{font-weight:400;color:var(--muted);font-size:12px}
+.pad{padding:12px 14px}
+.btn{border:1px solid var(--line2);background:var(--panel2);border-radius:8px;padding:7px 12px;font-size:13px;font-weight:600;line-height:1.25;white-space:nowrap;transition:border-color .15s,background .15s}
+.btn:hover:not(:disabled){border-color:var(--acc)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:4px 9px;font-size:12px;font-weight:500}
+.btn.primary{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn.gold{background:var(--gold);border-color:var(--gold);color:#fff}
+.btn.ghost{background:transparent}
+.btn.buy{background:var(--rise);border-color:var(--rise);color:#fff}
+.btn.sell{background:var(--fall);border-color:var(--fall);color:#fff}
+.seg{display:inline-flex;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:2px}
+.seg button{border:0;background:none;padding:3px 9px;border-radius:6px;font-size:12px;color:var(--muted)}
+.seg button.on{background:var(--panel);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.12);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.chips button{border:1px solid var(--line);background:var(--panel2);border-radius:6px;padding:2px 8px;font-size:12px;color:var(--muted)}
+.chips button:hover{color:var(--text);border-color:var(--acc)}
+.chips button.on{color:var(--text);border-color:var(--acc);background:var(--acc-soft)}
+.empty{padding:18px 14px;text-align:center;color:var(--muted);font-size:12.5px}
+.tag{display:inline-block;font-size:11px;padding:0 6px;border-radius:5px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.tag.acc{color:var(--acc);border-color:var(--acc)}.tag.gold{color:var(--gold);border-color:var(--gold)}.tag.warn{color:var(--warn);border-color:var(--warn)}
+
+/* home */
+.home{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:12px;align-items:start}
+.home .col{display:flex;flex-direction:column;gap:12px;min-width:0}
+.scene{position:relative;overflow:hidden}
+.scene svg{display:block;width:100%;height:auto;max-height:360px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .scene svg{filter:brightness(.82)}}
+:root[data-theme="dark"] .scene svg{filter:brightness(.82)}
+.vlayer{position:absolute;inset:0;pointer-events:none}
+.virus{position:absolute;pointer-events:auto;border:0;background:none;font-size:26px;line-height:1;padding:4px;transform:translate(-50%,-50%);animation:wob 1.6s ease-in-out infinite;cursor:pointer}
+@keyframes wob{50%{transform:translate(-50%,-58%) rotate(8deg)}}
+.actbox{display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--line)}
+.actbox .prog{flex:1;height:6px;background:var(--bar-bg);border-radius:3px;overflow:hidden}
+.actbox .prog i{display:block;height:100%;width:0;background:var(--acc);transition:width .25s linear}
+.bars{display:grid;gap:9px;padding:12px 14px}
+.bar{display:grid;grid-template-columns:52px minmax(0,1fr) 64px;align-items:center;gap:10px;font-size:12.5px}
+.bar .lab{color:var(--muted)}
+.bar .track{position:relative;height:9px;border-radius:5px;background:var(--bar-bg);overflow:hidden}
+.bar .track i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--acc);transition:width .4s}
+.bar .track.low i{background:var(--warn)}
+.bar .track.weak{outline:2px solid var(--warn);outline-offset:1px}
+.bar .val{text-align:right;font-family:var(--mono);font-size:12px}
+.lvrow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 14px 4px;font-size:12.5px}
+.lvpills{display:flex;gap:3px}
+.lvpills span{width:22px;height:6px;border-radius:3px;background:var(--bar-bg)}
+.lvpills span.on{background:var(--acc)}
+.statline{padding:4px 14px 12px;font-size:12px;color:var(--muted);line-height:1.7}
+.acts{display:flex;flex-direction:column;gap:12px;padding:12px 14px}
+.agroup h4{margin:0 0 6px;font-size:12px;color:var(--muted);font-weight:600}
+.agrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.abtn{border:1px solid var(--line);background:var(--panel2);border-radius:9px;padding:7px 9px;text-align:left;display:flex;flex-direction:column;gap:1px;min-width:0}
+.abtn:hover:not(:disabled){border-color:var(--acc)}
+.abtn:disabled{opacity:.5;cursor:not-allowed}
+.abtn b{font-size:13px}
+.abtn small{font-size:11px;color:var(--muted);line-height:1.4}
+.abtn .why{color:var(--warn)}
+.diary{max-height:280px;overflow:auto}
+.diary div{padding:7px 14px;border-bottom:1px dashed var(--line);font-size:12.5px;line-height:1.6}
+.diary div span{color:var(--faint);font-family:var(--mono);font-size:11px;margin-right:8px}
+.wardrobe{display:flex;flex-wrap:wrap;gap:6px;padding:12px 14px}
+.wear{display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel2);border-radius:8px;padding:5px 9px;font-size:12px}
+.wear i{width:14px;height:14px;border-radius:4px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
+.wear.on{border-color:var(--acc);background:var(--acc-soft)}
+.tvbox{padding:10px 14px;font-size:12.5px}
+.forecast{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:8px;background:var(--panel2);margin-bottom:8px}
+.newsl div{padding:6px 0;border-bottom:1px dashed var(--line);line-height:1.55}
+.newsl div span{font-family:var(--mono);font-size:11px;color:var(--faint);margin-right:6px}
+
+/* food */
+.foodtop{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;margin-bottom:12px;font-size:12.5px;color:var(--muted)}
+.foodtop b{color:var(--text)}
+.ftable{width:100%;border-collapse:separate;border-spacing:0}
+.ftable th{font-size:12px;color:var(--muted);font-weight:600;text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);background:var(--panel2);position:sticky;top:0}
+.ftable td{vertical-align:top;padding:8px;border-bottom:1px solid var(--line)}
+.ftable td.tier{white-space:nowrap;font-family:var(--mono);font-size:12px;color:var(--muted);padding-left:12px;width:84px}
+.fwrap{overflow-x:auto}
+.fopt{display:block;width:100%;min-width:150px;text-align:left;border:1px solid var(--line);background:var(--panel2);border-radius:9px;padding:7px 9px;margin-bottom:5px}
+.fopt:last-child{margin-bottom:0}
+.fopt:hover:not(:disabled){border-color:var(--acc)}
+.fopt:disabled{opacity:.5;cursor:not-allowed}
+.fopt b{display:block;font-size:13px}
+.fopt .meta{display:flex;flex-wrap:wrap;gap:3px 8px;font-size:11px;color:var(--muted);margin-top:2px}
+.fopt .meta .num{color:var(--text)}
+.fopt .why{display:block;font-size:11px;color:var(--warn);margin-top:2px}
+
+/* work */
+.work{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:12px;align-items:start}
+.jobs{display:flex;flex-direction:column;gap:8px;padding:12px 14px}
+.job{border:1px solid var(--line);background:var(--panel2);border-radius:10px;padding:10px 12px}
+.job.on{border-color:var(--acc);background:var(--acc-soft)}
+.jhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.jhead b{font-size:14px}
+.jmeta{font-size:12px;color:var(--muted);margin:3px 0 6px;line-height:1.6}
+.jreq{font-size:11.5px;color:var(--warn);margin-bottom:6px}
+.stage{position:relative;height:300px;margin:12px 14px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);overflow:hidden}
+.stage .tgt{position:absolute;transform:translate(-50%,-50%);border:0;background:none;font-size:30px;padding:4px;line-height:1}
+.stage .tgt small{display:block;font-size:10px;color:var(--muted)}
+.qitem{display:flex;align-items:center;gap:10px;padding:8px 10px;margin:8px;border-radius:9px;background:var(--panel);border:1px solid var(--line)}
+.qitem .tbar{flex:1;height:5px;background:var(--bar-bg);border-radius:3px;overflow:hidden}
+.qitem .tbar i{display:block;height:100%;background:var(--acc)}
+.qitem .tbar i.low{background:var(--warn)}
+.jstats{display:flex;flex-wrap:wrap;gap:6px 16px;padding:0 14px 12px;font-size:12.5px;color:var(--muted)}
+.jstats b{color:var(--text);font-family:var(--mono)}
+.typebox{display:flex;gap:8px;padding:0 14px 12px}
+.typebox input{flex:1;min-width:0;border:1px solid var(--line2);border-radius:8px;padding:8px 10px;background:var(--panel2)}
+
+/* shop / ledger */
+.shop{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}
+.list{display:flex;flex-direction:column}
+.li{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--line)}
+.li:last-child{border-bottom:0}
+.li .grow{flex:1;min-width:0}
+.li .grow b{font-size:13px}
+.li .grow small{display:block;font-size:11.5px;color:var(--muted);line-height:1.5}
+.li .price{font-family:var(--mono);font-size:13px;white-space:nowrap}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;padding:12px 14px;font-size:12.5px}
+.kv dt{color:var(--muted)}.kv dd{margin:0;text-align:right;font-family:var(--mono)}
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{font-weight:500;color:var(--muted);text-align:right;padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--panel2)}
+.tbl td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.tbl th:first-child,.tbl td:first-child{text-align:left}
+.tblwrap{overflow-x:auto}
+
+/* fx terminal */
+.term{background:var(--term-bg);color:var(--term-text);border-radius:12px;padding:12px;border:1px solid var(--term-line)}
+.term .card{background:var(--term-panel);border-color:var(--term-line);color:var(--term-text);box-shadow:none}
+.term .card>h3{border-color:var(--term-line)}
+.term .muted,.term small{color:var(--term-muted)}
+.term .btn{background:transparent;border-color:var(--term-line);color:var(--term-text)}
+.term .btn.buy{background:var(--rise);border-color:var(--rise);color:#fff}
+.term .btn.sell{background:var(--fall);border-color:var(--fall);color:#fff}
+.term .btn.primary{background:var(--info);border-color:var(--info);color:#fff}
+.term .tbl th{background:transparent;border-color:var(--term-line);color:var(--term-muted)}
+.term .tbl td{border-color:var(--term-line)}
+.tsum{display:grid;grid-template-columns:repeat(5,minmax(0,1fr)) auto;gap:8px;margin-bottom:10px;align-items:stretch}
+.tsum>div{background:var(--term-panel);border:1px solid var(--term-line);border-radius:10px;padding:8px 12px;min-width:0}
+.tsum small{display:block;font-size:11.5px}
+.tsum b{font:600 16px var(--mono);white-space:nowrap}
+.tsum .tbtns{display:flex;flex-direction:column;gap:6px;justify-content:center}
+.tnotice{height:26px;overflow:hidden;font-size:12px;color:var(--term-muted);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.tgrid{display:grid;grid-template-columns:210px minmax(0,1fr) 300px;gap:10px;align-items:stretch}
+.wl{display:flex;flex-direction:column}
+.wrow{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px;padding:8px 12px;border:0;border-bottom:1px solid var(--term-line);background:none;text-align:left;width:100%;color:var(--term-text)}
+.wrow.on{background:rgba(58,111,209,.14);box-shadow:inset 3px 0 0 var(--info)}
+.wrow b{font:600 12.5px var(--mono)}
+.wrow small{display:block;font-size:10.5px}
+.wrow .px{text-align:right;font:600 12.5px var(--mono)}
+.wrow .px small{font-weight:400}
+.chartp{display:flex;flex-direction:column}
+.ch-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;padding:9px 12px;border-bottom:1px solid var(--term-line)}
+.ch-head .seg{margin-left:auto;background:transparent;border-color:var(--term-line)}
+.ch-head .seg button{color:var(--term-muted)}
+.ch-head .seg button.on{background:var(--term-line);color:var(--term-text)}
+.chart-wrap{position:relative;flex:1;min-height:340px}
+#chart{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair;touch-action:pan-y}
+.ohlc{position:absolute;left:10px;top:6px;right:80px;font-size:11px;color:var(--term-muted);display:flex;flex-wrap:wrap;gap:2px 10px;pointer-events:none;font-family:var(--mono)}
+.tp{padding:10px 12px;display:flex;flex-direction:column;gap:9px}
+.bs{display:grid;grid-template-columns:1fr auto 1fr;gap:6px}
+.bsb{border:1.5px solid var(--term-line);background:transparent;border-radius:8px;padding:6px 9px;text-align:left;color:var(--term-text)}
+.bsb span{display:block;font-size:11px;color:var(--term-muted)}
+.bsb b{display:block;font:700 16px var(--mono)}
+.bsb.sellb b{color:var(--fall)}.bsb.buyb b{color:var(--rise)}.bsb.buyb{text-align:right}
+.bsb.sellb.on{border-color:var(--fall)}.bsb.buyb.on{border-color:var(--rise)}
+.bsp{align-self:center;text-align:center;font-size:10.5px;color:var(--term-muted)}
+.tin{display:flex;align-items:center;border:1px solid var(--term-line);border-radius:7px;padding:0 9px}
+.tin input{flex:1;min-width:0;border:0;background:transparent;padding:7px 5px;font:600 14px var(--mono);outline:none;color:var(--term-text)}
+.term input[type=range]{width:100%;accent-color:var(--info)}
+.term .chips button{background:transparent;border-color:var(--term-line);color:var(--term-muted)}
+.term .chips button.on{color:var(--term-text);border-color:var(--info)}
+.calc{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:12px;padding:8px 10px;border:1px solid var(--term-line);border-radius:8px}
+.calc dt{color:var(--term-muted)}.calc dd{margin:0;text-align:right;font-family:var(--mono)}
+.twarn{font-size:12px;color:var(--warn)}.twarn:empty{display:none}
+.rank{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:10px 12px;font-size:12.5px}
+.rank b{font:700 18px var(--mono)}
+.risk{height:3px;background:var(--term-line);border-radius:2px;margin:4px 0 2px auto;width:90px;overflow:hidden}
+.risk i{display:block;height:100%;width:0;background:var(--gold)}
+.risk i.hot{background:var(--red)}
+.dirt{display:inline-block;font-size:11px;font-weight:700;padding:0 5px;border-radius:4px;margin-left:5px;color:#fff}
+.dirt.long{background:var(--rise)}.dirt.short{background:var(--fall)}
+.rules{font-size:12px;line-height:1.8;padding:10px 14px;color:var(--term-muted)}
+
+/* modal, toast, inbox, loading */
+.modal{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;background:rgba(8,14,12,.5);padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(16px + env(safe-area-inset-bottom,0px))}
+.mbox{width:min(480px,100%);max-height:100%;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:0 24px 60px rgba(0,0,0,.3)}
+.mbox.wide{width:min(980px,100%)}
+.mbox h2{margin:0 0 8px;font-size:18px}
+.mbox p{margin:0 0 8px;color:var(--muted);line-height:1.7}
+.mfield{display:flex;align-items:center;border:1px solid var(--line2);border-radius:8px;padding:0 10px;background:var(--panel2);margin-top:8px}
+.mfield input{flex:1;min-width:0;border:0;background:transparent;padding:8px 6px;font:600 15px var(--mono);outline:none}
+.mprev{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.8}
+.merr{color:var(--red);font-size:12px;min-height:18px;margin-top:6px}
+.macts{display:flex;justify-content:flex-end;gap:8px;margin-top:8px;flex-wrap:wrap}
+.toasts{position:fixed;right:0;bottom:0;z-index:90;display:flex;flex-direction:column;gap:8px;padding:0 16px calc(16px + env(safe-area-inset-bottom,0px));pointer-events:none;width:min(380px,100%)}
+.toast{pointer-events:auto;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--acc);border-radius:10px;padding:9px 12px;box-shadow:0 10px 30px rgba(0,0,0,.18);font-size:12.5px;transition:opacity .4s,transform .4s}
+.toast b{display:block;margin-bottom:1px}.toast span{color:var(--muted)}
+.toast.warn{border-left-color:var(--warn)}.toast.bad{border-left-color:var(--red)}.toast.gold{border-left-color:var(--gold)}
+.toast.out{opacity:0;transform:translateX(20px)}
+.inbox{position:fixed;right:12px;top:calc(env(safe-area-inset-top,0px) + 60px);z-index:70;width:min(380px,calc(100% - 24px));max-height:70vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.25)}
+.msg{padding:10px 14px;border-bottom:1px solid var(--line);font-size:12.5px;line-height:1.6}
+.msg .from{font-weight:700}
+.msg .when{font-size:11px;color:var(--faint);font-family:var(--mono);margin-left:6px}
+.msg .mbtns{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.msg.done{opacity:.6}
+.loading{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:var(--bg);padding:24px;text-align:center}
+.loading .t{font:28px var(--display);color:var(--acc)}
+.loading .tip{max-width:36em;color:var(--muted);line-height:1.8}
+.charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:10px 0}
+.chartbox{border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.chartbox h4{margin:0 0 4px;font-size:12px;color:var(--muted);font-weight:600;display:flex;gap:10px;flex-wrap:wrap}
+.chartbox h4 i{font-style:normal}
+.chartbox svg{display:block;width:100%;height:auto}
+.marks{font-size:12.5px;line-height:1.9;margin:6px 0 10px;padding-left:18px}
+.foot{font-size:11.5px;color:var(--faint);line-height:1.7;border-top:1px dashed var(--line);padding-top:8px;margin-top:8px}
+.fam{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;padding:12px 14px}
+.fam .gcard{border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12px}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:1100px){
+  .tgrid{grid-template-columns:minmax(0,1fr) 300px}
+  .tgrid .wlc{grid-column:1/-1}
+  .wl{flex-direction:row;overflow-x:auto}
+  .wrow{flex:none;width:150px;border-bottom:0;border-right:1px solid var(--term-line)}
+  .tsum{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .tsum .tbtns{flex-direction:row;grid-column:1/-1}
+}
+@media (max-width:820px){
+  .home,.work,.shop{grid-template-columns:minmax(0,1fr)}
+  .tgrid{grid-template-columns:minmax(0,1fr)}
+  .charts{grid-template-columns:minmax(0,1fr)}
+  .money{margin-left:0;width:100%;order:3}
+  .top{position:static}
+  .tabs{top:env(safe-area-inset-top,0px)}
+  .home{display:flex;flex-direction:column}
+  .home .col{display:contents}
+  .o1{order:1}.o2{order:2}.o3{order:3}.o4{order:4}.o5{order:5}.o6{order:6}
+  .top{padding:8px 12px}
+  main{padding:10px 10px 30px}
+  .chart-wrap{min-height:280px}
+  .tsum{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+</style>
+</head>
+<body>
+<header class="top" id="top">
+  <div class="brand">慢慢富起来？</div>
+  <div class="clock"><b id="hDay"></b><span class="num" id="hTime"></span><span id="hWeather"></span></div>
+  <div class="money">
+    <span class="m-item">现金<b id="hCash"></b></span>
+    <span class="m-item" id="hDebtW" hidden>欠款<b id="hDebt"></b></span>
+    <span class="m-item" id="hFxW" hidden>交易账户<b id="hFx"></b></span>
+  </div>
+  <div class="ctrl">
+    <button class="btn sm ghost" id="btnInbox" type="button">消息<span class="badge" id="inboxBadge" hidden></span></button>
+    <div class="seg" id="speedSeg" role="group" aria-label="速度"><button type="button" data-s="1">1×</button><button type="button" data-s="2">2×</button><button type="button" data-s="4">4×</button></div>
+    <button class="btn sm" id="btnPause" type="button">暂停</button>
+  </div>
+</header>
+<nav class="tabs" id="tabs"></nav>
+<div class="paused-bar" id="pausedBar" hidden>已暂停。可以查看所有页面，行动要在继续之后进行。</div>
+<main>
+  <!-- 家 -->
+  <section class="view" data-view="home">
+    <div class="home">
+      <div class="col">
+        <div class="card scene o1"><svg id="avatar" viewBox="0 0 360 230" preserveAspectRatio="xMidYMid slice" aria-label="小人"></svg><div class="vlayer" id="vlayer"></div>
+          <div class="actbox"><span id="actTxt"></span><div class="prog"><i id="actProg"></i></div><button class="btn sm ghost" id="actCancel" type="button" hidden>停下</button></div>
+        </div>
+        <div class="card o3"><h3>现在能做的事 <small id="actHint"></small></h3><div class="acts" id="acts"></div></div>
+        <div class="card o4" id="tvCard" hidden><h3>电视 <small id="tvState"></small></h3><div class="tvbox"><div class="forecast" id="forecast"></div><div class="newsl" id="newsList"></div></div></div>
+      </div>
+      <div class="col">
+        <div class="card o2"><h3><span id="pName"></span><small id="pHouse"></small></h3>
+          <div class="bars" id="bars"></div>
+          <div class="lvrow"><span>心情 <b id="moodName"></b></span><span class="lvpills" id="moodPills"></span></div>
+          <div class="bars" style="padding-top:4px"><div class="bar"><span class="lab">心情</span><span class="track"><i id="moodBar"></i></span><span class="val" id="moodVal"></span></div></div>
+          <div class="lvrow"><span>健康 <b id="healthName"></b></span><span class="small muted" id="healthTrend"></span></div>
+          <div class="bars" style="padding-top:4px"><div class="bar"><span class="lab">健康</span><span class="track"><i id="healthBar"></i></span><span class="val" id="healthVal"></span></div></div>
+          <div class="statline" id="statline"></div>
+        </div>
+        <div class="card o5"><h3>衣柜 <small>换上新衣服，心情会好一点</small></h3><div class="wardrobe" id="wardrobe"></div></div>
+        <div class="card o6"><h3>日记 <small id="keepCount"></small></h3><div class="diary" id="diary"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 吃饭 -->
+  <section class="view" data-view="food">
+    <div class="card"><h3>吃饭 <small>每一档都有自己做、出门吃、点外卖的不同选择</small></h3>
+      <div class="pad"><div class="foodtop" id="foodTop"></div><div class="fwrap"><table class="ftable" id="ftable"></table></div></div>
+    </div>
+  </section>
+
+  <!-- 工作 -->
+  <section class="view" data-view="work">
+    <div class="work">
+      <div class="card"><h3>工作 <small>从简单来钱慢，到消耗大来钱快</small></h3><div class="jobs" id="jobs"></div></div>
+      <div class="card" id="shiftCard"><h3 id="shiftTitle">还没有开工</h3><div id="shiftBody"><div class="empty">在左边选一份工作开工。上班期间离开这个页面，工作不会停，但需要你处理的事情会错过。</div></div></div>
+    </div>
+  </section>
+
+  <!-- 商店 -->
+  <section class="view" data-view="shop">
+    <div class="shop">
+      <div class="col" style="display:flex;flex-direction:column;gap:12px">
+        <div class="card"><h3>住处 <small id="houseNow"></small></h3><div class="list" id="houses"></div><div class="pad" id="houseGoal"></div></div>
+        <div class="card"><h3>订阅服务 <small>自动续费，可以随时取消</small></h3><div class="list" id="subs"></div></div>
+      </div>
+      <div class="col" style="display:flex;flex-direction:column;gap:12px">
+        <div class="card"><h3>家电与工具</h3><div class="list" id="tools"></div></div>
+        <div class="card"><h3>衣物</h3><div class="list" id="clothes"></div></div>
+        <div class="card"><h3>日用品</h3><div class="list" id="goods"></div></div>
+        <div class="card"><h3>我的东西 <small>可以卖给二手店</small></h3><div class="list" id="mine"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 借贷 -->
+  <section class="view" data-view="loan">
+    <div class="shop">
+      <div class="card"><h3>随心借 <small>随借随还，按日计息</small></h3>
+        <dl class="kv" id="loanKv"></dl>
+        <div class="pad" style="display:flex;gap:8px"><button class="btn primary" id="btnBorrow" type="button">借款</button><button class="btn" id="btnRepay" type="button">还款</button></div>
+      </div>
+      <div class="card"><h3>利率说明</h3>
+        <div class="pad small muted" style="line-height:1.8">按全部待还金额所在的档位计息，每天零点计一次，利息计入待还金额。</div>
+        <div class="tblwrap"><table class="tbl" id="loanTiers"></table></div>
+        <div class="pad" id="mortBox"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 交易 -->
+  <section class="view" data-view="fx">
+    <div class="term">
+      <div class="tsum" id="tsum"></div>
+      <div class="tnotice" id="tnotice"></div>
+      <div class="tgrid">
+        <div class="card wlc"><div class="wl" id="wl"></div></div>
+        <div class="card chartp">
+          <div class="ch-head"><b class="num" id="chSym"></b><b class="num" id="chPx" style="font-size:20px"></b><span class="num" id="chChg"></span><span class="small muted" id="chMeta"></span>
+            <div class="seg" id="tfSeg"><button type="button" data-tf="1">15分</button><button type="button" data-tf="4">1时</button><button type="button" data-tf="16">4时</button><button type="button" data-tf="96">日线</button></div></div>
+          <div class="chart-wrap" id="chartWrap"><canvas id="chart"></canvas><div class="ohlc" id="ohlc"></div></div>
+          <div class="rank" id="rankBox"></div>
+        </div>
+        <div class="card"><div class="tp" id="tradePanel">
+          <div class="bs"><button class="bsb sellb" data-dir="-1" type="button"><span>卖出 / 做空</span><b id="tpBid"></b></button><div class="bsp">点差<br><span class="num" id="tpSp"></span></div><button class="bsb buyb on" data-dir="1" type="button"><span>买入 / 做多</span><b id="tpAsk"></b></button></div>
+          <div><div class="small muted" style="display:flex;justify-content:space-between"><span>保证金</span><span class="num" id="tpFree"></span></div><div class="tin"><span class="muted">¥</span><input id="inMargin" type="number" min="100" step="100" value="500" inputmode="decimal"></div><div class="chips" id="mgChips"><button type="button" data-f="0.1">10%</button><button type="button" data-f="0.25">25%</button><button type="button" data-f="0.5">50%</button><button type="button" data-f="1">全部</button></div></div>
+          <div><div class="small muted" style="display:flex;justify-content:space-between"><span>杠杆</span><b class="num" id="levVal"></b></div><input id="inLev" type="range" min="1" max="100" step="1" value="10"><div class="chips" id="levChips"><button type="button" data-l="1">1×</button><button type="button" data-l="5">5×</button><button type="button" data-l="10">10×</button><button type="button" data-l="20">20×</button><button type="button" data-l="50">50×</button><button type="button" data-l="100">100×</button></div></div>
+          <dl class="calc" id="calc"></dl>
+          <div class="twarn" id="twarn"></div>
+          <button class="btn buy" id="btnOpen" type="button" style="padding:10px">开仓</button>
+        </div></div>
+      </div>
+      <div class="card" style="margin-top:10px"><h3>持仓 <small id="posSum"></small></h3><div class="tblwrap"><table class="tbl" id="posTbl"></table></div><div class="empty" id="posEmpty">没有持仓。</div></div>
+      <div class="card" style="margin-top:10px" id="sigCard" hidden><h3>行情助手 Pro <small id="sigAcc"></small></h3><div class="tblwrap"><table class="tbl" id="sigTbl"></table></div></div>
+      <div class="card" style="margin-top:10px"><h3>交易规则</h3><div class="rules" id="rules"></div></div>
+    </div>
+  </section>
+
+  <!-- 账本 -->
+  <section class="view" data-view="ledger">
+    <div class="shop">
+      <div class="col" style="display:flex;flex-direction:column;gap:12px">
+        <div class="card"><h3>固定支出</h3><div class="list" id="bills"></div></div>
+        <div class="card"><h3>这一代</h3><dl class="kv" id="lifeKv"></dl><div class="pad" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="btnFamily" type="button">族谱</button><button class="btn ghost" id="btnEnd" type="button">让这一代落幕</button></div></div>
+      </div>
+      <div class="card"><h3>收支流水 <small>最近 150 条</small></h3><div class="tblwrap" style="max-height:620px;overflow:auto"><table class="tbl" id="flow"></table></div></div>
+    </div>
+  </section>
+</main>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<div class="inbox" id="inbox" hidden></div>
+<div class="modal" id="modal" hidden><div class="mbox" id="mbox" role="dialog" aria-modal="true"></div></div>
+<div class="loading" id="loading" hidden><div class="t" id="loadT"></div><div class="tip" id="loadTip"></div></div>
+<script>
+(function(){
+'use strict';
+const $=(s,r)=>(r||document).querySelector(s);
+const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const rint=(a,b)=>Math.floor(a+Math.random()*(b-a+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const mod=(a,n)=>((a%n)+n)%n;
+const p2=n=>String(n).padStart(2,'0');
+function gauss(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+function yuan(v,sign){
+  if(!isFinite(v))v=0;if(Math.abs(v)<0.005)v=0;const a=Math.abs(v);
+  const s='¥'+a.toLocaleString('en-US',{minimumFractionDigits:a>=10000?0:2,maximumFractionDigits:a>=10000?0:2});
+  if(sign)return (v>0?'+':v<0?'−':'')+s;return (v<0?'−':'')+s;
+}
+const cls=v=>v>0.004?'rise':v<-0.004?'fall':'';
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ================= 常量 ================= */
+const STEP_MS=250, MIN_PER_STEP=2.5, DAY=1440, FXT=15;
+const dayOf=t=>Math.floor(t/DAY)+1;
+const hourOf=t=>Math.floor(mod(t,DAY)/60);
+const hm=t=>`${p2(hourOf(t))}:${p2(Math.floor(mod(t,60)))}`;
+const WD='日一二三四五六';
+function gdate(t){return new Date(S.baseMs+t*60000);}
+function fmtDate(t){const d=gdate(t);return `${d.getMonth()+1}月${d.getDate()}日 周${WD[d.getDay()]}`;}
+const isWeekend=t=>{const w=gdate(t).getDay();return w===0||w===6;};
+const stamp=t=>`第${dayOf(t)}天 ${hm(t)}`;
+
+const MOOD_NAMES=['心死','半死','平常','快乐','幸福'];
+const MOOD_DRIFT=[1.2,0,-0.5,-1.8,-1.2];
+const MOOD_MULT=[0.6,0.8,1,1.15,1.3];
+const HEALTH_NAMES=['重病','体弱','普通','健康','强健'];
+const hlvOf=h=>h<15?0:h<35?1:h<70?2:h<90?3:4;
+const BAR_NAMES={nut:'饮食',energy:'精力',act:'活动',clean:'清洁'};
+
+const HOUSES={
+  bed:{rank:0,name:'群租房床位',rent:35,sleep:0.85,cookExtra:15,moodH:-0.3,desc:'公共厨房，放不下大件'},
+  room:{rank:1,name:'单间',rent:70,sleep:1,cookExtra:0,moodH:0,desc:'有自己的小厨房'},
+  flat:{rank:2,name:'一居室',rent:120,sleep:1.05,cookExtra:0,moodH:0.3,desc:'有客厅，住着舒服一些'},
+  own:{rank:3,name:'自己的房子',rent:0,sleep:1.1,cookExtra:0,moodH:0.5,desc:'不用交房租，但要还房贷'},
+};
+const HOUSE_PRICE=900000, DOWN_RATE=0.3, MORT_RATE=0.00012, MORT_DAILY=105;
+const MOVE_FEE=200;
+
+const ITEMS={
+  cooker:{name:'电饭煲',price:180,cat:'tool',desc:'做饭时间 −25%',brk:true},
+  pan:{name:'好一点的锅',price:260,cat:'tool',desc:'自己做的饭营养 +8'},
+  bed:{name:'好床垫',price:1200,cat:'tool',desc:'同样的时间睡得更足（+20%）',house:1},
+  tv:{name:'电视',price:1500,cat:'tool',desc:'能看节目、天气预报和新闻',house:1,brk:true},
+  washer:{name:'洗衣机',price:900,cat:'tool',desc:'清洁下降变慢 30%',house:1,brk:true},
+  ebike:{name:'电动车',price:2200,cat:'tool',desc:'能接外卖骑手的活；出门吃饭省 10 分钟',brk:true},
+  umbrella:{name:'雨伞',price:40,cat:'good',desc:'下雨天出门，心情不再受影响'},
+  medicine:{name:'感冒药',price:35,cat:'good',desc:'之后 24 小时，病毒冒出来的频率减半',use:true},
+  suit:{name:'正装',price:600,cat:'wear',slot:'top',color:'#34405a',desc:'文员工作需要'},
+  tee:{name:'白 T 恤',price:60,cat:'wear',slot:'top',color:'#f2f0ea'},
+  hoodie:{name:'红卫衣',price:150,cat:'wear',slot:'top',color:'#c8553d'},
+  shirt:{name:'格子衬衫',price:200,cat:'wear',slot:'top',color:'#4f7cac'},
+  coat:{name:'呢子外套',price:480,cat:'wear',slot:'top',color:'#8a6a4f'},
+  cap:{name:'棒球帽',price:80,cat:'wear',slot:'acc',kind:'cap',color:'#2e7d5b'},
+  scarf:{name:'黄围巾',price:120,cat:'wear',slot:'acc',kind:'scarf',color:'#d9a441'},
+};
+const OLD_TOP={name:'旧外套',color:'#8d949b'};
+
+const SUBS={
+  takeout:{name:'外卖会员',price:25,period:7,desc:'外卖每单便宜 4 元、快 5 分钟'},
+  clean:{name:'家政服务',price:180,period:7,desc:'有人定期上门打扫，清洁下降变慢 60%'},
+  gym:{name:'健身卡',price:120,period:30,desc:'锻炼效果 ×1.5'},
+  video:{name:'视频会员',price:20,period:30,desc:'看电视的心情加成 ×1.3',need:'tv'},
+  signal:{name:'行情助手 Pro',price:199,period:30,desc:'每 6 小时给出各货币对的方向判断，并公开历史准确率',need:'fx'},
+};
+
+const LOAN_LIMIT=300000;
+const loanRate=L=>L<0.005?0:L<10000?0.0001:L<50000?0.0002:L<100000?0.0003:0.0004;
+
+/* 饮食阶梯：每一档都有不同的方式 */
+const TIERS=['3 元','5–6 元','10–15 元','15–30 元','40–75 元','75–150 元','150–300 元','300–1000 元'];
+const MODES={cook:'自己做',instant:'速食',out:'出门吃',deliv:'点外卖'};
+const FOODS=[
+  {id:'noodle',tier:0,mode:'cook',name:'挂面卧个蛋',price:3,min:40,q:52,qs:0.12,mood:1,lv:1},
+  {id:'instant',tier:1,mode:'instant',name:'泡面',price:5,min:8,q:12,mood:0,lv:0,note:'不加心情，也几乎没有营养'},
+  {id:'home2',tier:1,mode:'cook',name:'家常一荤一素',price:6,min:60,q:66,qs:0.18,mood:3,lv:2},
+  {id:'baozi',tier:1,mode:'out',name:'包子豆浆',price:5,min:25,q:44,mood:2,lv:1,hours:[6,10]},
+  {id:'homegood',tier:2,mode:'cook',name:'做一顿好的',price:14,min:100,q:70,qs:0.22,mood:5,lv:2},
+  {id:'rice',tier:2,mode:'out',name:'盖浇饭简餐',price:13,min:35,q:58,mood:3,lv:1,hours:[10,21]},
+  {id:'pindan',tier:2,mode:'deliv',name:'拼单外卖',price:13,min:15,q:46,mood:3,lv:0,hours:[10,22]},
+  {id:'deliv',tier:3,mode:'deliv',name:'家常外卖',price:22,min:15,q:55,mood:4,lv:0,hours:[8,24]},
+  {id:'signature',tier:3,mode:'cook',name:'做几个拿手菜',price:22,min:120,q:72,qs:0.22,mood:7,lv:2,cook:20},
+  {id:'bistro',tier:3,mode:'out',name:'小馆子炒菜',price:28,min:60,q:70,mood:6,lv:1,hours:[11,22]},
+  {id:'fancy',tier:4,mode:'cook',name:'进口食材大餐',price:45,min:150,q:78,qs:0.2,mood:8,lv:2,cook:30},
+  {id:'chain',tier:4,mode:'out',name:'连锁快餐 / 咖啡',price:48,min:40,q:44,mood:7,lv:1,hours:[7,23]},
+  {id:'brand',tier:4,mode:'deliv',name:'品牌外卖',price:62,min:15,q:48,mood:7,lv:0,hours:[8,24]},
+  {id:'farm',tier:5,mode:'out',name:'农家小炒',price:95,min:90,q:86,mood:10,lv:1,hours:[11,21],memo:'一顿很香的农家小炒'},
+  {id:'buffet',tier:5,mode:'out',name:'海鲜自助',price:138,min:120,q:64,mood:12,lv:1,hours:[11,21],memo:'海鲜自助的照片'},
+  {id:'feast',tier:5,mode:'deliv',name:'大份聚餐外卖',price:105,min:20,q:56,mood:8,lv:0,hours:[10,23]},
+  {id:'table',tier:5,mode:'cook',name:'在家做一桌',price:85,min:180,q:80,qs:0.14,mood:11,lv:2,cook:40,memo:'在家做的一桌菜'},
+  {id:'sushi',tier:6,mode:'deliv',name:'日料外卖',price:190,min:20,q:70,mood:12,lv:0,hours:[11,22]},
+  {id:'bbq',tier:6,mode:'out',name:'烧烤夜宵',price:168,min:120,q:40,mood:14,lv:2,hours:[18,26],memo:'夜宵摊的合影'},
+  {id:'scenic',tier:6,mode:'out',name:'景点餐厅',price:240,min:180,q:62,mood:15,lv:2,hours:[10,20],memo:'景点门口的照片'},
+  {id:'fine',tier:6,mode:'out',name:'高档餐厅',price:290,min:120,q:84,mood:16,lv:2,hours:[11,22],memo:'高档餐厅的菜单'},
+  {id:'luxury',tier:7,mode:'out',name:'奢侈餐厅',price:780,min:180,q:90,mood:22,lv:2,hours:[17,22],memo:'一张很贵的小票'},
+  {id:'wagyu',tier:7,mode:'cook',name:'顶级食材自己做',price:360,min:150,q:84,qs:0.12,mood:16,lv:2,cook:60},
+];
+
+const ACTS={
+  nap:{g:'休息',name:'小睡一会',min:60,kind:'sleep',lv:0,emoji:'💤',desc:'补一点精力'},
+  sleep:{g:'休息',name:'睡觉',min:540,kind:'sleep',full:true,lv:0,emoji:'💤',desc:'睡到精力满，最多 9 小时'},
+  lie:{g:'休息',name:'躺着发呆',min:60,lv:0,rate:{energy:1.5,mood:0.6},emoji:'😶',desc:'什么也不做'},
+  shower:{g:'生活',name:'洗澡',min:30,lv:1,eff:{clean:45},moodEff:2,emoji:'🚿'},
+  tidy:{g:'生活',name:'打扫房间',min:60,lv:2,eff:{clean:22},moodEff:3,emoji:'🧹'},
+  walk:{g:'生活',name:'出门散步',min:60,lv:1,rate:{act:12,mood:6,energy:-3},out:true,emoji:'🚶'},
+  gym:{g:'生活',name:'锻炼',min:60,lv:1,rate:{act:26,mood:4,energy:-9,clean:-8},emoji:'🏃'},
+  phone:{g:'娱乐',name:'刷手机',min:30,lv:0,rate:{mood:5,energy:-4},emoji:'📱'},
+  tv:{g:'娱乐',name:'看电视',min:60,lv:0,rate:{mood:7,energy:-2},need:'tv',emoji:'📺'},
+  friend:{g:'娱乐',name:'约朋友聊聊',min:180,lv:3,cost:40,rate:{mood:8,energy:-3},out:true,emoji:'🧋'},
+  hobby:{g:'娱乐',name:'画画',min:120,lv:4,cost:15,rate:{mood:6},emoji:'🎨',keep:true},
+  study:{g:'成长',name:'自学办公技能',min:120,lv:2,rate:{mood:-1,energy:-5},emoji:'📖'},
+  clinic:{g:'医疗',name:'去诊所看病',min:90,lv:0,cost:200,needFlu:true,emoji:'🏥',desc:'把感冒治好'},
+  hospital:{g:'医疗',name:'住院一天',min:1440,lv:0,cost:800,emoji:'🏥',desc:'止住病情，健康慢慢回升'},
+};
+
+const WEATHER={sun:{n:'晴',i:'☀️'},cloud:{n:'多云',i:'⛅'},rain:{n:'雨',i:'🌧️'},hot:{n:'高温',i:'🥵'},cold:{n:'降温',i:'🥶'}};
+function rollWeather(){const r=Math.random();return r<0.34?'sun':r<0.6?'cloud':r<0.8?'rain':r<0.9?'hot':'cold';}
+
+const NAMES=['林小满','陈一禾','周予安','许知远','沈清和','顾念','陆今朝','宋安然','唐小暖','何以宁'];
+
+/* ================= 状态 ================= */
+let S=null, META=null;
+let curTab='home', hover=null, CC=null, M=null;
+
+function blankMeta(){return {family:[],tvEver:false,tradesEver:0,signalEver:false,liqEver:false,gen:0};}
+
+function newLife(inh){
+  META.gen++;
+  const base=new Date();base.setHours(0,0,0,0);base.setFullYear(base.getFullYear()+25*(META.gen-1));
+  const s={
+    v:1,gen:META.gen,name:pick(NAMES),baseMs:base.getTime(),t:480,speed:1,paused:false,
+    cash:800,bars:{nut:60,energy:90,act:50,clean:70},health:62,mood:{lv:2,v:55,hi:0},lastMeal:450,
+    skills:{cook:0,study:0,flyer:0,cashier:0,site:0,rider:0,office:0},
+    house:'bed',items:{},wear:{top:null,acc:null},subs:{},keeps:[],
+    loan:{on:false,amt:0},mort:null,unpaid:[],
+    fx:null,fxInvited:false,fxInviteAt:null,fxDeclined:0,loanInviteSent:false,
+    act:null,job:null,flu:null,viruses:[],medUntil:0,
+    weather:{today:'sun',tomorrow:rollWeather()},
+    inbox:[],diary:[],flow:[],series:[],marks:[],firsts:{},recent:{},dwell:{},news:[],
+    stats:{workMin:0,wages:0,deposits:0,withdraws:0,spentLife:0,subsPaid:0,interest:0,fxPnl:0,trades:0,liqs:0,meals:[0,0,0,0,0,0,0,0],sold:0},
+    day:{wage:0,interest:0,dep:0,wd:0,meals:[],spent:0},
+    goal:null,dayWages:[],lastWorkT:null,nextId:1,
+  };
+  S=s;
+  newMarket();
+  if(inh)applyInheritance(inh);
+  S.weather.fc=forecastOf(S.weather.tomorrow);
+  diary(`我叫${S.name}。${inh?'接下了家里留下来的东西，重新开始。':'刚来这座城市，住在群租房的一个床位上，身上还有 800 块。'}`);
+}
+function forecastOf(w){return Math.random()<0.9?w:rollWeather();}
+const uid=()=>S.nextId++;
+const has=id=>!!(S.items[id]&&!S.items[id].broken);
+const owns=id=>!!S.items[id];
+const W=()=>S.weather.today;
+const running=()=>!S.paused&&!welcomeOpen();
+function welcomeOpen(){return !!(M&&M.block);}
+
+/* ================= 记录 ================= */
+function diary(text){S.diary.unshift({t:S.t,text});if(S.diary.length>150)S.diary.pop();}
+function mark(key,text){if(S.firsts['m_'+key])return;S.firsts['m_'+key]=1;S.marks.push({t:S.t,text});}
+function flow(text,amt,cat){S.flow.unshift({t:S.t,text,amt,cat});if(S.flow.length>400)S.flow.pop();}
+function spend(amt,text,cat){S.cash-=amt;flow(text,-amt,cat||'life');if(cat!=='fx'&&cat!=='loan')S.day.spent+=amt;if(cat==='life')S.stats.spentLife+=amt;}
+function earn(amt,text,cat){S.cash+=amt;flow(text,amt,cat||'work');}
+function first(key){if(S.firsts[key])return false;S.firsts[key]=1;return true;}
+function avgWage(){const a=S.dayWages.slice(-7);if(!a.length)return 0;return a.reduce((x,y)=>x+y,0)/a.length;}
+function moneyMood(delta){const ref=Math.max(150,avgWage());moodAdd(clamp(7*Math.tanh(delta/ref),-10,10));}
+function sat(key){const arr=(S.recent[key]||[]).filter(x=>S.t-x<DAY);S.recent[key]=arr;return Math.pow(0.65,arr.length);}
+function used(key){(S.recent[key]=S.recent[key]||[]).push(S.t);}
+
+/* ================= 心情与健康 ================= */
+function moodAdd(dv){
+  const m=S.mood;m.v+=dv;
+  if(m.v<=0){if(m.lv>0){m.lv--;m.v=55;m.hi=0;diary(moodDownText(m.lv));mark('mood'+m.lv,`心情第一次降到「${MOOD_NAMES[m.lv]}」`);}else m.v=0;}
+  if(m.v>100)m.v=100;
+}
+function moodDownText(lv){return ['什么都不想做了。','提不起劲，只想躺着。','心情回到了平常。','没有之前那么开心了。'][lv]||'';}
+function moodUpText(lv){return ['','好像能起来走走了。','心情缓过来了一点。','最近挺开心的。','日子过得踏实，心里很安稳。'][lv]||'';}
+function moodLevelStep(dm){
+  const m=S.mood;
+  if(m.v>=95&&m.lv<4){m.hi+=dm;if(m.hi>=480){m.lv++;m.v=45;m.hi=0;diary(moodUpText(m.lv));}}else m.hi=0;
+}
+function sleepMult(){return HOUSES[S.house].sleep*(has('bed')?1.2:1);}
+function weakest(){const B=S.bars;let k='nut';for(const x of ['energy','act','clean'])if(B[x]<B[k])k=x;return k;}
+function healthRate(){
+  const B=S.bars;const w=Math.min(B.nut,B.energy,B.act,B.clean);
+  let hr=(w-45)*0.004;const m=MOOD_MULT[S.mood.lv];hr=hr>0?hr*m:hr*(2-m);
+  const inHosp=S.act&&S.act.id==='hospital';
+  if(hlvOf(S.health)===0&&!inHosp)hr=Math.min(hr,-0.08);
+  if(inHosp)hr=Math.max(hr,0.45);
+  hr-=0.25*S.viruses.length;if(S.flu&&S.flu.stage==='on')hr-=0.05;
+  return hr;
+}
+
+function bodyStep(dm){
+  const h=dm/60,B=S.bars,a=S.act,hs=HOUSES[S.house];
+  const asleep=!!(a&&a.kind==='sleep');
+  const r={nut:-0.4,energy:asleep?12*sleepMult():-3.5,act:asleep?-0.5:-1.2,clean:asleep?-0.4:-1.0,mood:MOOD_DRIFT[S.mood.lv]*(asleep&&MOOD_DRIFT[S.mood.lv]<0?0.3:1)+hs.moodH};
+  if(has('washer'))r.clean*=0.7;if(S.subs.clean)r.clean*=0.4;
+  if(a&&a.rate)for(const k in a.rate){let v=a.rate[k];if(k==='mood'&&v>0)v*=a.sat;r[k]=(r[k]||0)+v;}
+  if(a&&a.kind==='work')jobBody(r);
+  if(a&&a.out){if(W()==='rain'&&!has('umbrella'))r.mood-=3;if(W()==='hot')r.energy-=2;}
+  const since=S.t-S.lastMeal;
+  if(since>360&&!asleep){r.mood-=3;r.energy-=2;}
+  if(since>720)r.nut-=2;
+  if(B.clean<20)r.mood-=1.5;
+  if(!asleep&&B.energy<15)r.mood-=2;
+  if(B.act<20)r.mood-=0.8;
+  if(S.flu&&S.flu.stage==='on'){r.mood-=1.5;if(!asleep)r.energy-=1;}
+  r.mood-=0.5*S.viruses.length;
+  for(const k of ['nut','energy','act','clean'])B[k]=clamp(B[k]+r[k]*h,0,100);
+  moodAdd(r.mood*h);moodLevelStep(dm);
+  const before=hlvOf(S.health);
+  S.health=clamp(S.health+healthRate()*h,0,100);
+  const after=hlvOf(S.health);
+  if(after!==before){
+    if(after<before){diary(['身体撑不住了，得去医院。','最近总觉得虚。','身体差了一点。','没有之前那么结实了。'][after]||'');mark('health'+after,`健康第一次降到「${HEALTH_NAMES[after]}」`);}
+    else diary(['','身体好了一些。','恢复到了普通的状态。','最近身体很好。','从来没觉得这么有劲。'][after]||'');
+    if(after===0)checkMedicalGap();
+  }
+  if(!asleep&&B.energy<=0){forceSleep();}
+}
+function forceSleep(){
+  const was=S.act;if(was)stopAct(true);
+  diary('实在撑不住，倒头就睡着了。');
+  S.act={kind:'sleep',id:'sleep',name:'累倒睡着',start:S.t,dur:360,full:true,emoji:'💤',sat:1};
+}
+
+/* ================= 行动 ================= */
+function actReason(id){
+  const A=ACTS[id];
+  if(S.paused)return '暂停中';
+  if(S.act)return '正在'+S.act.name;
+  if(S.mood.lv<A.lv)return `心情需要「${MOOD_NAMES[A.lv]}」以上`;
+  const hl=hlvOf(S.health);
+  if(hl===0&&!['nap','sleep','lie','phone','tv','clinic','hospital'].includes(id))return '病得太重';
+  if(A.need==='tv'&&!has('tv'))return owns('tv')?'电视坏了':'需要电视';
+  if(A.needFlu&&!S.flu)return '现在没生病';
+  if(A.cost&&S.cash<A.cost)return '钱不够';
+  return '';
+}
+function startAct(id){
+  const A=ACTS[id];const why=actReason(id);if(why){toast(why,'','warn');return;}
+  if(A.cost)spend(A.cost,A.name,'life');
+  const s=A.rate&&A.rate.mood>0?sat('act_'+id):1;used('act_'+id);
+  let rate=A.rate?Object.assign({},A.rate):null;
+  if(id==='gym'&&S.subs.gym&&rate){rate.act*=1.5;rate.mood*=1.3;}
+  if(id==='tv'&&S.subs.video&&rate)rate.mood*=1.3;
+  S.act={kind:A.kind||'act',id,name:A.name,start:S.t,dur:A.min,rate,sat:s,out:!!A.out,emoji:A.emoji,full:!!A.full};
+  if(id==='friend'||id==='walk')S.firsts['went_'+id]=1;
+  renderAll();
+}
+function stopAct(silent){
+  const a=S.act;if(!a)return;
+  if(a.kind==='work')endShift(true);
+  S.act=null;if(!silent)renderAll();
+}
+function actStep(dm){
+  const a=S.act;if(!a)return;
+  if(a.kind==='work'){jobStep(dm);return;}
+  const el=S.t-a.start;
+  if(a.full&&a.kind==='sleep'&&S.bars.energy>=99.5&&el>=60){finishAct();return;}
+  if(el>=a.dur)finishAct();
+}
+function finishAct(){
+  const a=S.act;S.act=null;
+  if(a.kind==='meal'){eatDone(a);renderAll();return;}
+  if(a.kind==='move'){moveDone(a);renderAll();return;}
+  const A=ACTS[a.id];
+  if(A&&A.eff)for(const k in A.eff)S.bars[k]=clamp(S.bars[k]+A.eff[k],0,100);
+  if(A&&A.moodEff)moodAdd(A.moodEff*sat('eff_'+a.id)),used('eff_'+a.id);
+  if(a.id==='study'){S.skills.study=Math.min(100,S.skills.study+6*(1-S.skills.study/100));if(first('study'))diary('开始自学办公软件，有点难，但能看懂。');}
+  if(a.id==='hobby'){const n=S.keeps.filter(k=>k.kind==='art').length+1;S.keeps.push({id:uid(),name:`自己画的画（第${n}幅）`,kind:'art',gen:S.gen,t:S.t,val:10});diary('画完了一幅画，挂在墙上。');}
+  if(a.id==='clinic'){endFlu('医生开了药，好多了。');}
+  if(a.id==='hospital'){S.health=Math.min(100,S.health+8);diary('在医院住了一天。');}
+  if(a.id==='friend'&&first('friend'))diary('和朋友聊到很晚，好久没这么轻松了。');
+  if(a.kind==='sleep'&&S.bars.energy>=95&&first('goodsleep'))diary('睡了一个好觉。');
+  renderAll();
+}
+
+/* ================= 吃饭 ================= */
+function foodCost(f){let p=f.price;if(f.mode==='deliv'&&S.subs.takeout)p=Math.max(1,p-4);return p;}
+function foodTime(f){
+  let m=f.min;
+  if(f.mode==='cook'){if(has('cooker'))m*=0.75;m+=HOUSES[S.house].cookExtra;}
+  if(f.mode==='out'&&has('ebike'))m=Math.max(15,m-10);
+  if(f.mode==='deliv'&&S.subs.takeout)m=Math.max(8,m-5);
+  return Math.round(m);
+}
+function foodQ(f){let q=f.q;if(f.mode==='cook'){q+=S.skills.cook*(f.qs||0.1);if(has('pan'))q+=8;}return Math.min(100,Math.round(q));}
+function foodOpen(f){
+  if(!f.hours)return true;const h=hourOf(S.t);const [a,b]=f.hours;
+  return b>24?(h>=a||h<b-24):(h>=a&&h<b);
+}
+function foodReason(f){
+  if(S.paused)return '暂停中';
+  if(S.act)return '正在'+S.act.name;
+  if(S.mood.lv<f.lv)return `心情需要「${MOOD_NAMES[f.lv]}」以上`;
+  if(hlvOf(S.health)===0&&f.mode==='out')return '病得太重，出不了门';
+  if(f.cook&&S.skills.cook<f.cook)return `厨艺需要 ${f.cook}`;
+  if(!foodOpen(f))return `营业时间 ${f.hours[0]}:00–${f.hours[1]>24?f.hours[1]-24:f.hours[1]}:00`;
+  if(S.cash<foodCost(f))return '钱不够';
+  return '';
+}
+function eat(id){
+  const f=FOODS.find(x=>x.id===id);const why=foodReason(f);if(why){toast(why,'','warn');return;}
+  const cost=foodCost(f);spend(cost,`吃饭：${f.name}`,'life');
+  S.act={kind:'meal',id:f.id,name:(f.mode==='cook'?'做饭、吃饭':'吃饭')+'：'+f.name,start:S.t,dur:foodTime(f),out:f.mode==='out',emoji:f.mode==='cook'?'🍳':'🍜',sat:1,rate:f.mode==='cook'?{energy:-1}:null};
+  renderAll();
+}
+function eatDone(a){
+  const f=FOODS.find(x=>x.id===a.id);const q=foodQ(f);const s=sat('food_'+f.id);used('food_'+f.id);
+  S.bars.nut=clamp(S.bars.nut+(q-S.bars.nut)*0.3,0,100);
+  S.bars.energy=clamp(S.bars.energy+4,0,100);
+  S.lastMeal=S.t;
+  let mg=f.mood*s+(q-50)*0.04;if(f.mode==='out'&&W()==='rain'&&!has('umbrella'))mg-=2;
+  if(mg)moodAdd(mg);
+  S.stats.meals[f.tier]++;S.day.meals.push(f.mode);
+  if(f.mode==='cook'){const before=S.skills.cook;S.skills.cook=Math.min(100,S.skills.cook+2.2*(1-S.skills.cook/100));if(Math.floor(before/10)!==Math.floor(S.skills.cook/10)&&S.skills.cook>=20)diary(`做饭越来越顺手了（厨艺 ${Math.floor(S.skills.cook)}）。`);}
+  if(f.id==='homegood'&&q>=85&&first('goodcook')){diary('今天做的菜，不比外面的农家小炒差。');S.keeps.push({id:uid(),name:'一张自己做的菜的照片',kind:'photo',gen:S.gen,t:S.t,val:5});}
+  if(first('food_'+f.id)){
+    if(f.tier>=4)diary(`第一次吃${f.name}。`);
+    if(f.memo)S.keeps.push({id:uid(),name:f.memo,kind:'photo',gen:S.gen,t:S.t,val:5});
+  }
+  if(f.id==='instant'&&S.stats.meals[1]>0){/* 事实不评论 */}
+}
+
+/* ================= 物品、衣服、住处、订阅 ================= */
+function buyReason(id){
+  const I=ITEMS[id];
+  if(S.paused)return '暂停中';
+  if(owns(id)&&!I.use)return '已经有了';
+  if(I.house&&HOUSES[S.house].rank<I.house)return '现在的住处放不下';
+  if(S.cash<I.price)return '钱不够';
+  return '';
+}
+function buy(id){
+  const I=ITEMS[id];const why=buyReason(id);if(why){toast(why,'','warn');return;}
+  spend(I.price,`买了${I.name}`,'life');
+  if(I.use){if(id==='medicine'){S.medUntil=S.t+DAY;toast('吃了感冒药','之后 24 小时，病毒冒出来的频率减半','');}}
+  else S.items[id]={t:S.t,broken:false};
+  if(I.cat==='wear'){moodAdd(6*sat('buywear'));used('buywear');}
+  else if(!I.use)moodAdd(3*sat('buy'));used('buy');
+  if(id==='tv'){META.tvEver=true;diary('买了电视。晚上终于有点声音了。');}
+  if(id==='ebike')diary('买了电动车，去哪儿都方便了。');
+  if(I.cat==='wear'&&first('wear_'+id))diary(`买了${I.name}。`);
+  renderAll();
+}
+function sellValue(id){const I=ITEMS[id];return Math.round(I.price*(I.cat==='wear'?0.2:0.4)*(S.items[id].broken?0.5:1));}
+function sell(id){
+  if(S.paused){toast('暂停中','','warn');return;}
+  const I=ITEMS[id];const v=sellValue(id);delete S.items[id];
+  if(S.wear.top===id)S.wear.top=null;if(S.wear.acc===id)S.wear.acc=null;
+  earn(v,`卖掉${I.name}`,'sell');S.stats.sold++;
+  mark('sell',`第一次卖掉东西：${I.name}`);diary(`把${I.name}卖了，换了 ${yuan(v)}。`);renderAll();
+}
+function sellKeep(kid){
+  if(S.paused){toast('暂停中','','warn');return;}
+  const i=S.keeps.findIndex(k=>k.id===kid);if(i<0)return;const k=S.keeps[i];S.keeps.splice(i,1);
+  earn(k.val,`卖掉${k.name}`,'sell');S.stats.sold++;mark('sellkeep',`第一次卖掉纪念物：${k.name}`);renderAll();
+}
+function repair(id){
+  const I=ITEMS[id];const c=Math.round(I.price*0.3);
+  if(S.cash<c){toast('钱不够','','warn');return;}
+  spend(c,`修${I.name}`,'life');S.items[id].broken=false;renderAll();
+}
+function wear(id){
+  if(S.paused){toast('暂停中','','warn');return;}
+  if(!id){S.wear.top=null;renderAll();return;}
+  const I=ITEMS[id];if(S.wear[I.slot]===id){S.wear[I.slot]=null;}else{S.wear[I.slot]=id;moodAdd(2*sat('wear_'+id));used('wear_'+id);}
+  renderAll();
+}
+function moveReason(k){
+  if(S.paused)return '暂停中';if(S.act)return '正在'+S.act.name;
+  if(k===S.house)return '现在住这里';if(k==='own')return '';
+  const H=HOUSES[k];if(S.cash<MOVE_FEE+H.rent*7)return `需要搬家费和一周房租（${yuan(MOVE_FEE+H.rent*7)}）`;
+  return '';
+}
+function moveTo(k){
+  const why=moveReason(k);if(why){toast(why,'','warn');return;}
+  spend(MOVE_FEE,'搬家费','life');
+  S.act={kind:'move',id:k,name:'搬家',start:S.t,dur:240,emoji:'📦',sat:1,rate:{energy:-6,act:10}};renderAll();
+}
+function moveDone(a){
+  const old=S.house;S.house=a.id;
+  for(const id of Object.keys(S.items)){const I=ITEMS[id];if(I.house&&HOUSES[S.house].rank<I.house){const v=sellValue(id);delete S.items[id];earn(v,`搬家时处理掉${I.name}`,'sell');}}
+  diary(`搬进了${HOUSES[S.house].name}。`);moodAdd(HOUSES[S.house].rank>HOUSES[old].rank?8:-6);
+}
+function subscribe(id){
+  if(S.paused){toast('暂停中','','warn');return;}
+  const D=SUBS[id];if(S.cash<D.price){toast('钱不够','','warn');return;}
+  spend(D.price,`订阅${D.name}`,'sub');S.stats.subsPaid+=D.price;
+  S.subs[id]={next:S.t+D.period*DAY,cancel:false,since:S.t};
+  if(id==='signal')META.signalEver=true;
+  renderAll();
+}
+function toggleCancel(id){if(!S.subs[id])return;S.subs[id].cancel=!S.subs[id].cancel;renderAll();}
+function billSubs(){
+  for(const id of Object.keys(S.subs)){
+    const s=S.subs[id],D=SUBS[id];
+    if(S.t>=s.next){
+      if(s.cancel){delete S.subs[id];flow(`${D.name}到期，不再续费`,0,'sub');continue;}
+      if(S.cash>=D.price){spend(D.price,`${D.name}自动续费`,'sub');S.stats.subsPaid+=D.price;s.next+=D.period*DAY;}
+      else{delete S.subs[id];msg('system','账单',`${D.name}续费失败（余额不足），服务已暂停。`);}
+    }
+  }
+}
+
+/* ================= 账单、房租、借贷、房贷 ================= */
+function addBill(name,amt,kind){S.unpaid.push({id:uid(),name,amt,kind,t:S.t});}
+function unpaidTotal(){return S.unpaid.reduce((a,b)=>a+b.amt,0);}
+function autoPay(){
+  for(const b of S.unpaid.slice()){
+    if(S.cash<=0.005)break;
+    const p=Math.min(S.cash,b.amt);S.cash-=p;b.amt-=p;flow(`支付${b.name}`,-p,b.kind==='rent'?'rent':'life');
+    if(b.amt<0.005)S.unpaid=S.unpaid.filter(x=>x!==b);
+  }
+}
+function payRent(){
+  const H=HOUSES[S.house];if(!H.rent)return;
+  addBill(`房租（${H.name}）`,H.rent,'rent');autoPay();
+  const oldest=S.unpaid.filter(b=>b.kind==='rent').sort((a,b)=>a.t-b.t)[0];
+  if(oldest){
+    if(!S.loanInviteSent)loanInvite();
+    if(S.t-oldest.t>=7*DAY&&H.rank>0){
+      S.unpaid=S.unpaid.filter(b=>b.kind!=='rent');
+      S.house='bed';for(const id of Object.keys(S.items)){const I=ITEMS[id];if(I.house){delete S.items[id];}}
+      moodAdd(-20);diary('房租拖了一周，被房东请走了，押金抵了欠租。大件没地方放，只能留下。');mark('evict','第一次因为欠房租搬走');
+    }
+  }
+}
+function debtTotal(){return (S.loan.amt||0)+(S.mort?S.mort.principal+S.mort.arrears:0)+unpaidTotal();}
+function borrow(v){
+  S.loan.amt+=v;S.cash+=v;flow('随心借 借款',v,'loan');mark('loan','第一次借款');
+  diary(`借了 ${yuan(v)}。`);
+}
+function repay(v){v=Math.min(v,S.cash,S.loan.amt);S.cash-=v;S.loan.amt-=v;if(S.loan.amt<0.005)S.loan.amt=0;flow('随心借 还款',-v,'loan');}
+function loanInterest(){
+  if(S.loan.amt<0.005)return;
+  const r=loanRate(S.loan.amt),it=S.loan.amt*r;S.loan.amt+=it;S.stats.interest+=it;S.day.interest+=it;
+  flow(`借款利息（日利率 ${(r*100).toFixed(2)}%，计入待还）`,0,'loan');
+}
+function mortgageDay(){
+  const m=S.mort;if(!m)return;
+  const it=m.principal*MORT_RATE;const pay=Math.min(MORT_DAILY,m.principal+it);
+  S.day.interest+=it;S.stats.interest+=it;
+  if(S.cash>=pay){S.cash-=pay;m.principal=m.principal+it-pay;m.arrDays=0;flow('房贷月供（按日）',-pay,'house');}
+  else{m.principal+=it;m.arrears+=pay;m.arrDays++;flow('房贷逾期',0,'house');if(m.arrDays===1)diary('这个月的房贷没还上。');}
+  if(m.arrears>0&&S.cash>0){const p=Math.min(S.cash,m.arrears);S.cash-=p;m.arrears-=p;m.principal-=Math.min(p,m.principal);flow('补还房贷逾期',-p,'house');if(m.arrears<0.005){m.arrears=0;m.arrDays=0;}}
+  if(m.arrDays>=30){
+    const proceeds=HOUSE_PRICE*0.85;const owe=m.principal+m.arrears;
+    S.mort=null;S.house='room';const rest=proceeds-owe;
+    if(rest>=0)earn(rest,'房子被拍卖后的余款','house');else{S.loan.on=true;S.loan.amt+=-rest;}
+    moodAdd(-30);diary('房贷逾期太久，房子被收走拍卖了。');mark('foreclose','房子被收走');
+  }
+  if(m&&m.principal<0.5){S.mort=null;diary('房贷还清了。');}
+}
+function buyHouse(){
+  if(S.paused){toast('暂停中','','warn');return;}
+  const down=HOUSE_PRICE*DOWN_RATE;if(S.cash<down){toast('首付不够','','warn');return;}
+  if(S.act){toast('正在'+S.act.name,'','warn');return;}
+  spend(down,'买房首付','house');S.mort={principal:HOUSE_PRICE-down,arrears:0,arrDays:0};
+  S.house='own';S.goal=null;moodAdd(20);diary('买房了。钥匙拿在手里，有点不真实。');mark('house','买了房子');
+  S.keeps.push({id:uid(),name:'新房的钥匙',kind:'thing',gen:S.gen,t:S.t,val:1});renderAll();
+}
+
+/* ================= 生病 ================= */
+function fluStep(dm){
+  const f=S.flu;if(!f)return;
+  const el=S.t-f.start;
+  if(f.stage==='sign'&&el>=480){f.stage='on';f.next=S.t+rnd(20,50);diary('发烧了，浑身没劲。');}
+  if(f.stage==='on'){
+    if(S.t>=f.next&&S.viruses.length<8){
+      S.viruses.push({id:uid(),x:rnd(12,88),y:rnd(12,80)});
+      let gap=rnd(35,65);if(S.t<S.medUntil)gap*=2;if(S.act&&S.act.kind==='sleep')gap*=1.5;if(S.bars.energy>60)gap*=1.2;
+      f.next=S.t+gap;
+    }
+    if(el>=480+60*60)endFlu('感冒终于好了。');
+  }
+}
+function endFlu(text){S.flu=null;S.viruses=[];if(text)diary(text);}
+function killVirus(id){if(!running())return;S.viruses=S.viruses.filter(v=>v.id!==id);renderHomeLive();}
+function checkMedicalGap(){
+  if(S.cash<ACTS.hospital.cost){if(!S.loanInviteSent)loanInvite();scheduleFxInvite(rnd(24,60)*60);}
+}
+
+/* ================= 消息 ================= */
+function msg(type,from,text,choices,data,expH){
+  const m={id:uid(),t:S.t,type,from,text,choices:choices||null,data:data||{},exp:expH?S.t+expH*60:null,done:!choices,seen:false};
+  S.inbox.unshift(m);if(S.inbox.length>60)S.inbox.pop();
+  toast(from,text.length>40?text.slice(0,40)+'…':text,'');
+  renderBadge();
+  return m;
+}
+function resolveMsg(id,key){
+  const m=S.inbox.find(x=>x.id===id);if(!m||m.done)return;
+  if(S.paused&&key!=='__exp'){toast('暂停中','','warn');return;}
+  m.done=true;m.result=key;
+  const d=m.data;
+  if(m.type==='family'){
+    if(key==='give'||key==='half'){const v=key==='give'?d.amount:d.amount/2;const p=Math.min(v,S.cash);if(p>0){spend(p,'转给家里','life');}diary(p>=v?`给家里转了 ${yuan(p)}。`:`给家里转了 ${yuan(p)}，只有这么多了。`);moodAdd(3);}
+    else{moodAdd(-6);diary(key==='__exp'?'家里的电话没接上，后来也没回。':'跟家里说这次拿不出来。');}
+  }
+  if(m.type==='loanInvite'){S.loan.on=true;if(key==='open')setTab('loan');}
+  if(m.type==='fxInvite'){
+    if(key==='open'){unlockFx();}
+    else{S.fxDeclined++;S.fxInviteAt=null;S.fxInvited=false;}
+  }
+  if(m.type==='break'){
+    if(key==='repair')repair(d.item);
+  }
+  renderAll();
+}
+function inboxStep(){
+  for(const m of S.inbox){if(!m.done&&m.exp&&S.t>=m.exp){const last=m.choices[m.choices.length-1][1];resolveMsg(m.id,m.type==='family'?'__exp':last);}}
+}
+function loanInvite(){
+  if(S.loanInviteSent)return;S.loanInviteSent=true;S.loan.on=true;
+  msg('loanInvite','随心借','手头紧的时候不用硬扛。随心借最高可借 30 万，随借随还，按日计息，详细利率在应用里可以查到。',[['打开看看','open'],['知道了','no']]);
+}
+function scheduleFxInvite(delayMin){
+  if(S.fx||S.fxInviteAt)return;
+  S.fxInviteAt=S.t+delayMin;
+}
+function fxInviteStep(){
+  if(S.fx||!S.fxInviteAt||S.t<S.fxInviteAt)return;
+  S.fxInviteAt=null;S.fxInvited=true;
+  if(S.fxDeclined===0)msg('fxInvite','老同学 阿杰','好久不见！最近我在做外汇，7×24 小时都有行情，拿手机在家就能做，时间比上班灵活多了。平台挺正规的，费用和规则都写得清清楚楚。要不要试试？我把开户链接发你。',[['打开看看','open'],['先不了','no']]);
+  else msg('fxInvite','汇通国际','专业外汇交易终端：主要货币对 7×24 小时报价，1–100 倍杠杆可选，开户免费。点差、隔夜费和强平规则开户前均可查看。',[['了解一下','open'],['不需要','no']]);
+}
+function goalGapCheck(){
+  if(S.fx)return;
+  const gap=gapDays();
+  if(S.goal&&gap>120)scheduleFxInvite(rnd(18,40)*60);
+  if(S.fxDeclined&&!S.fxInviteAt&&(S.goal||unpaidTotal()>0)&&Math.random()<0.12)scheduleFxInvite(rnd(6,30)*60);
+}
+function avgNet(){
+  const a=S.series.slice(-7);if(a.length<2)return null;
+  return (a[a.length-1].net-a[0].net)/(a.length-1);
+}
+function gapDays(){
+  if(!S.goal)return 0;const need=S.goal.amount-S.cash;if(need<=0)return 0;
+  const n=avgNet();if(n===null)return Infinity;if(n<=0)return Infinity;return need/n;
+}
+
+/* ================= 随机事件 ================= */
+function hourly(){
+  const d=dayOf(S.t);
+  if(!S.flu&&d>3){
+    let p=0.04/24;if(W()==='cold')p*=1.8;if(S.bars.clean<30)p*=2;p*=[2,1.5,1,0.7,0.5][hlvOf(S.health)];
+    if(Math.random()<p){S.flu={stage:'sign',start:S.t,next:0};diary('有点鼻塞，嗓子也不太舒服。');}
+  }
+  if(d>2&&Math.random()<0.03/24){
+    const home=!S.act||(S.act.kind!=='work'&&!S.act.out);
+    if(home&&!(S.act&&S.act.kind==='sleep')){moodAdd(8*sat('visit'));used('visit');diary('老朋友来串门，带了点水果。');}
+    else msg('info','老朋友','路过你那儿，没见着人，下次再约。');
+  }
+  if(d>4&&Math.random()<0.012/24){
+    if(Math.random()<0.5){earn(200,'家里给的红包','gift');msg('info','家里','给你转了 200，别太省。');}
+    else{S.bars.nut=clamp(S.bars.nut+12,0,100);moodAdd(4);msg('info','家里','寄了一箱家里做的吃的，记得放冰箱。');}
+  }
+  if(d>8&&Math.random()<0.025/24&&!S.inbox.some(m=>m.type==='family'&&!m.done)){
+    const amt=rint(5,30)*100;
+    msg('family','家里',`${pick(['老家的房子漏雨要修','爸的腰又不太好，要去医院看看','表弟上学差一点学费','家里的电瓶车坏了'])}，能不能帮着出 ${yuan(amt)}？`,[['转过去','give'],['转一半','half'],['这次不行','no']],{amount:amt},12);
+  }
+}
+function daily(){
+  sampleDay();
+  S.weather.today=S.weather.tomorrow;S.weather.tomorrow=rollWeather();S.weather.fc=forecastOf(S.weather.tomorrow);
+  payRent();billSubs();mortgageDay();loanInterest();
+  if(S.fx)fxDaily();
+  for(const id of Object.keys(S.items)){
+    const I=ITEMS[id],it=S.items[id];
+    if(I.brk&&!it.broken&&S.t-it.t>15*DAY&&Math.random()<0.012){
+      it.broken=true;msg('break','家里',`${I.name}坏了。修一下要 ${yuan(Math.round(I.price*0.3))}。`,[['修',`repair`],['先不管','no']],{item:id},48);
+      if(id==='ebike'&&S.act&&S.act.kind==='work'&&S.job&&S.job.id==='rider')stopAct(true);
+    }
+  }
+  goalGapCheck();
+  const aw=avgWage();
+  if(S.series.length&&S.series[S.series.length-1].interest>aw&&aw>0)mark('int','日利息第一次超过日均工资');
+  S.day={wage:0,interest:0,dep:0,wd:0,meals:[],spent:0};
+}
+function sampleDay(){
+  const fe=S.fx?fxEquity():0;
+  const lev=S.fx&&fe>0?S.fx.positions.reduce((a,p)=>a+p.N,0)/fe:0;
+  const net=S.cash+fe+(S.house==='own'?HOUSE_PRICE*0.9:0)-debtTotal();
+  S.dayWages.push(S.day.wage);if(S.dayWages.length>30)S.dayWages.shift();
+  S.series.push({d:dayOf(S.t-1),health:Math.round(S.health),moodLv:S.mood.lv,moodV:Math.round(S.mood.v),cash:Math.round(S.cash),fx:Math.round(fe),debt:Math.round(debtTotal()),net:Math.round(net),lev:+lev.toFixed(2),wage:Math.round(S.day.wage),dep:Math.round(S.day.dep),wd:Math.round(S.day.wd),meals:S.day.meals.slice(),interest:+S.day.interest.toFixed(2),dwell:Object.assign({},S.dwell)});
+  if(S.series.length>2000)S.series.shift();
+}
+
+/* ================= 工作 ================= */
+const JOBS={
+  flyer:{name:'发传单',place:'地铁口',emoji:'📄',hours:4,base:18,ex:{energy:-3,act:10,clean:-3,mood:-1},lv:1,minH:15,open:[8,18],
+    attn:'偶尔需要你：有人路过时点一下，把传单递过去',pay:'¥18/时，每递出一张另加 ¥0.8',quit:'中途走，按已干的时间结'},
+  cashier:{name:'便利店收银',place:'便利店',emoji:'🏪',hours:8,base:21,ex:{energy:-2,act:1,clean:-0.5,mood:-1.5},lv:1,minH:15,open:[0,24],
+    attn:'需要盯着：顾客来了要及时结账，没结上会被投诉扣钱',pay:'¥21/时，22 点到 6 点 ×1.2',quit:'中途走，扣一成'},
+  site:{name:'工地搬砖',place:'工地',emoji:'🧱',hours:8,base:36,ex:{energy:-7,act:18,clean:-8,mood:-2},lv:1,minH:35,open:[6,10],
+    attn:'不需要操作，熬过去就行',pay:'¥36/时，越熟练越多',quit:'中途走，只结一半'},
+  rider:{name:'外卖骑手',place:'街上',emoji:'🛵',hours:6,base:0,ex:{energy:-4,act:12,clean:-3,mood:-1},lv:2,minH:35,open:[8,22],need:'ebike',
+    attn:'自己挑单；送到后要点确认，拖久了会被扣钱',pay:'按单计，每单 ¥10–16，雨天加 ¥3',quit:'中途走，没送完的单作废'},
+  office:{name:'办公室文员',place:'写字楼',emoji:'🗂️',hours:8,base:28,ex:{energy:-1.5,act:0,clean:0,mood:-1},lv:2,minH:15,open:[8,10],need:'suit',study:30,weekday:true,
+    attn:'持续打字：把收到的文件名录入系统，积压太多会影响表现',pay:'¥28/时起，越熟练越高（最高 ¥42/时）',quit:'中途走，按已干的时间结'},
+};
+const JOB_ORDER=['flyer','cashier','site','rider','office'];
+const OFFICE_TEXT=['季度报表','采购合同','会议纪要','报销单','客户名单','库存清单','出差申请','发票汇总','考勤记录','项目周报','入职材料','供应商报价'];
+
+function jobReason(id){
+  const J=JOBS[id];
+  if(S.paused)return '暂停中';
+  if(S.act)return '正在'+S.act.name;
+  if(S.mood.lv<J.lv)return `心情需要「${MOOD_NAMES[J.lv]}」以上`;
+  if(S.health<J.minH)return J.minH>=35?'身体太弱，干不了':'病得太重';
+  if(J.need==='ebike'&&!has('ebike'))return owns('ebike')?'电动车坏了':'需要电动车';
+  if(J.need==='suit'&&!owns('suit'))return '需要一套正装';
+  if(J.study&&S.skills.study<J.study)return `办公技能需要 ${J.study}（现在 ${Math.floor(S.skills.study)}）`;
+  if(J.weekday&&isWeekend(S.t))return '周末不上班';
+  const h=hourOf(S.t);if(!(h>=J.open[0]&&h<J.open[1]))return `${J.open[0]}:00–${J.open[1]}:00 之间才能开工`;
+  return '';
+}
+function startShift(id){
+  const why=jobReason(id);if(why){toast(why,'','warn');return;}
+  const J=JOBS[id];
+  S.act={kind:'work',id,name:'上班：'+J.name,start:S.t,dur:J.hours*60,emoji:J.emoji,sat:1,out:id==='flyer'||id==='rider'};
+  S.job={id,start:S.t,pay:0,basePay:0,n:0,missed:0,items:[],offers:[],active:[],tasks:[],next:S.t+rnd(2,6),bonusPaid:false};
+  if(first('job_'+id))diary(`第一天去${J.place}上班。`);
+  setTab('work');renderAll();
+}
+function jobBody(r){
+  const j=S.job;if(!j)return;const J=JOBS[j.id];
+  for(const k in J.ex)r[k]=(r[k]||0)+J.ex[k];
+  if(j.id==='cashier'){const h=hourOf(S.t);if(h>=22||h<6)r.energy-=2;}
+  if(j.id==='rider'&&W()==='rain')r.mood-=2;
+  if((j.id==='site'||j.id==='rider'||j.id==='flyer')&&W()==='hot')r.energy-=2;
+  if(j.id==='office'&&j.tasks.length>6)r.mood-=1;
+}
+function jobStep(dm){
+  const a=S.act,j=S.job;if(!j){S.act=null;return;}
+  const J=JOBS[j.id];const el=S.t-a.start;const tired=S.bars.energy<25;
+  let rate=J.base/60;
+  if(j.id==='cashier'){const h=hourOf(S.t);if(h>=22||h<6)rate*=1.2;rate*=1+S.skills.cashier*0.002;}
+  if(j.id==='site')rate*=1+S.skills.site*0.003;
+  if(j.id==='office'){rate*=1+S.skills.office*0.005;if(j.tasks.length>6)rate*=0.75;}
+  if(tired)rate*=0.8;
+  j.basePay+=rate*dm;
+  // 各工作的机制
+  if(j.id==='flyer'){
+    if(S.t>=j.next){j.items.push({id:uid(),x:rnd(10,90),y:rnd(18,82),born:S.t,e:pick(['🚶','🚶‍♀️','🧑‍💼','👵','🧒','👨‍🦳','🧍'])});j.next=S.t+rnd(4,8);}
+    j.items=j.items.filter(it=>S.t-it.born<(tired?14:20));
+  }
+  if(j.id==='cashier'){
+    if(S.t>=j.next){j.items.push({id:uid(),born:S.t,win:16+S.skills.cashier*0.15,e:pick(['🧑','👩','🧓','🧑‍🎓','👷','👩‍💼'])});j.next=S.t+rnd(8,16);}
+    for(const c of j.items.slice()){if(S.t-c.born>c.win*(tired?0.8:1)){j.items=j.items.filter(x=>x!==c);j.missed++;j.pay-=5;moodAdd(-1);}}
+  }
+  if(j.id==='site'){j.n=Math.floor(el/12);}
+  if(j.id==='rider'){
+    if(S.t>=j.next&&j.offers.length<3){j.offers.push({id:uid(),pay:rint(10,16)+(W()==='rain'?3:0),dist:rint(18,40),born:S.t});j.next=S.t+rnd(5,11);}
+    else if(S.t>=j.next)j.next=S.t+rnd(5,11);
+    j.offers=j.offers.filter(o=>S.t-o.born<12);
+    for(const o of j.active){
+      if(o.arrived==null){o.left-=dm;if(o.left<=0)o.arrived=S.t;}
+      else if(S.t-o.arrived>10&&!o.done){o.done=true;j.pay+=o.pay-3;j.n++;j.missed++;}
+    }
+    j.active=j.active.filter(o=>!o.done);
+  }
+  if(j.id==='office'){
+    if(S.t>=j.next){j.tasks.push({id:uid(),text:pick(OFFICE_TEXT)+'-'+rint(10,99)});j.next=S.t+rnd(14,24)/(tired?0.8:1);}
+  }
+  if(el>=a.dur){endShift(false);S.act=null;}
+}
+function jobClick(kind,id){
+  if(!running()){toast('暂停中','','warn');return;}
+  const j=S.job;if(!j)return;
+  if(kind==='flyer'){const it=j.items.find(x=>x.id===id);if(!it)return;j.items=j.items.filter(x=>x!==it);j.n++;j.pay+=0.8*(1+S.skills.flyer/100);}
+  if(kind==='cash'){const c=j.items.find(x=>x.id===id);if(!c)return;j.items=j.items.filter(x=>x!==c);j.n++;j.pay+=1;}
+  if(kind==='take'){if(j.active.length>=2){toast('最多同时送两单','','warn');return;}const o=j.offers.find(x=>x.id===id);if(!o)return;j.offers=j.offers.filter(x=>x!==o);j.active.push({id:o.id,pay:o.pay,left:o.dist*(W()==='rain'?1.4:1)*(1-S.skills.rider/300),total:o.dist,arrived:null});}
+  if(kind==='deliver'){const o=j.active.find(x=>x.id===id);if(!o||o.arrived==null)return;o.done=true;j.pay+=o.pay;j.n++;j.active=j.active.filter(x=>!x.done);}
+  renderWorkLive();
+}
+function officeType(val){
+  const j=S.job;if(!j||j.id!=='office'||!running())return false;
+  const t=j.tasks[0];if(t&&val.trim()===t.text){j.tasks.shift();j.n++;j.pay+=2;return true;}
+  return false;
+}
+function endShift(interrupted){
+  const j=S.job;if(!j)return;const J=JOBS[j.id];const el=S.t-j.start;
+  let base=j.basePay,extra=j.pay;
+  if(interrupted){
+    if(j.id==='cashier')base*=0.9;
+    if(j.id==='site')base*=0.5;
+    if(j.id==='office')moodAdd(-3);
+  }
+  let total=Math.max(0,base+extra);
+  let note='';
+  if(!interrupted&&Math.random()<0.05){total+=50;note='，领班多给了 50';}
+  total=Math.round(total*100)/100;
+  if(total>0){earn(total,`${J.name}工资${interrupted?'（中途离开）':''}${note}`,'work');S.stats.wages+=total;S.day.wage+=total;moneyMood(total);}
+  S.stats.workMin+=el;S.lastWorkT=S.t;
+  const hrs=el/60;const sk=j.id;S.skills[sk]=Math.min(100,S.skills[sk]+hrs*1.5*(1-S.skills[sk]/100));
+  if(first('wage'))diary(`第一次领到工资，${yuan(total)}。`);
+  S.lastShift={id:j.id,total,n:j.n,missed:j.missed,interrupted,t:S.t};
+  let injury=0;
+  if(j.id==='site'&&Math.random()<0.015*hrs/8)injury=1;
+  if(j.id==='rider'&&Math.random()<(W()==='rain'?0.03:0.01)*hrs/6)injury=1;
+  S.job=null;
+  if(injury){
+    const bill=rint(15,40)*100;S.health=Math.max(0,S.health-12);
+    diary(j.id==='rider'?'下雨路滑，摔了一跤，去医院缝了几针。':'在工地被砸到了脚，去医院处理了。');
+    addBill('医药费',bill,'medical');autoPay();
+    if(unpaidTotal()>0){loanInvite();scheduleFxInvite(rnd(24,60)*60);}
+    msg('info','医院',`医药费 ${yuan(bill)}${unpaidTotal()>0?'，还有一部分没付清，记在账上':''}。`);
+  }
+}
+
+/* ================= 外汇市场（从游戏开始就一直在运行） ================= */
+const PAIRS=[
+  {sym:'EUR/USD',nick:'欧元/美元',p0:1.1650,dp:5,pip:0.0001,spread:1.2,vol:0.00050,swap:0.00007},
+  {sym:'USD/JPY',nick:'美元/日元',p0:147.80,dp:3,pip:0.01,spread:1.4,vol:0.00055,swap:0.00008},
+  {sym:'GBP/USD',nick:'英镑/美元',p0:1.3420,dp:5,pip:0.0001,spread:1.6,vol:0.00058,swap:0.00008},
+  {sym:'AUD/USD',nick:'澳元/美元',p0:0.6580,dp:5,pip:0.0001,spread:1.5,vol:0.00062,swap:0.00007},
+  {sym:'USD/CAD',nick:'美元/加元',p0:1.3850,dp:5,pip:0.0001,spread:2.0,vol:0.00048,swap:0.00007},
+  {sym:'USD/CHF',nick:'美元/瑞郎',p0:0.7980,dp:5,pip:0.0001,spread:1.8,vol:0.00052,swap:0.00007},
+  {sym:'GBP/JPY',nick:'英镑/日元',p0:198.40,dp:3,pip:0.01,spread:3.2,vol:0.00078,swap:0.00010},
+  {sym:'USD/CNH',nick:'美元/离岸人民币',p0:7.1250,dp:5,pip:0.0001,spread:22,vol:0.00028,swap:0.00009},
+];
+const LIQ=0.8, HIST_LEN=2600, HIST_CAP=3000, BOTS=160;
+const fxI=t=>Math.floor(t/FXT);
+
+function makeTick(p,o,i){
+  const dir=Math.random()<0.5?-1:1;
+  let mag=Math.abs(gauss())*p.vol,k=0;const r=Math.random();
+  if(r<0.001){mag*=rnd(4,7);k=2;}
+  const c=o*(1+dir*mag);
+  let h=Math.max(o,c)+Math.abs(gauss())*p.vol*0.45*o;
+  let l=Math.min(o,c)-Math.abs(gauss())*p.vol*0.45*o;
+  if(r>0.998){k=1;const sp=rnd(3,8)*p.vol*o;if(Math.random()<0.5)h+=sp;else l-=sp;}
+  return {i,o,h,l,c,k};
+}
+function newMarket(){
+  const i0=fxI(S.t);
+  const hist=PAIRS.map(p=>{
+    const arr=[];let price=p.p0;
+    for(let i=i0-HIST_LEN;i<=i0;i++){const t=makeTick(p,price,i);arr.push(t);price=t.c;}
+    const k=p.p0*(1+rnd(-0.01,0.01))/price;for(const t of arr){t.o*=k;t.h*=k;t.l*=k;t.c*=k;}
+    return arr;
+  });
+  const mk={hist,lastI:i0,notices:[],sig:null,sigHits:0,sigTotal:0,bots:[]};
+  // 用历史行情统计信号的准确率（信号方向本身是随机的）
+  for(let pi=0;pi<PAIRS.length;pi++){const h=hist[pi];for(let s=0;s+24<h.length;s+=24){const d=Math.random()<0.5?1:-1;mk.sigTotal++;if(Math.sign(h[s+24].c-h[s].c)===d)mk.sigHits++;}}
+  for(let b=0;b<BOTS;b++){
+    const eq=rint(5,50)*1000;
+    mk.bots.push({eq,pos:null,lev:pick([2,5,10,20,20,50,50,100,100,100]),pOpen:rnd(0.01,0.06),pClose:rnd(0.01,0.05),frac:rnd(0.1,0.5),sleep:rint(0,23),st:{day:eq,week:eq,all:eq},tr:{day:false,week:false,all:false},ph:`1${pick(['3','5','7','8','9'])}${rint(0,9)}****${String(rint(0,9999)).padStart(4,'0')}`});
+  }
+  S.mkt=mk;
+}
+const hsp=pi=>PAIRS[pi].spread*PAIRS[pi].pip/2;
+const lastTk=pi=>{const h=S.mkt.hist[pi];return h[h.length-1];};
+const mid=pi=>lastTk(pi).c;
+function tickAt(pi,j){const h=S.mkt.hist[pi];const idx=h.length-1-(S.mkt.lastI-j);return h[Math.max(0,Math.min(h.length-1,idx))];}
+function dayOpenPx(pi){const d0=Math.floor(S.mkt.lastI/96)*96;return tickAt(pi,d0).o;}
+const fmtPx=(pi,v)=>v.toFixed(PAIRS[pi].dp);
+const closePx=(p,m)=>p.dir>0?m-hsp(p.pi):m+hsp(p.pi);
+const priceP=(p,px)=>p.N*(px-p.entry)/p.entry*p.dir;
+const posPnl=p=>priceP(p,closePx(p,mid(p.pi)))+p.swap;
+function liqPx(p){const need=-LIQ*p.m-p.swap;return p.entry*(1+need/p.N*p.dir);}
+function distPips(p){const px=closePx(p,mid(p.pi)),lp=liqPx(p);return (p.dir>0?px-lp:lp-px)/PAIRS[p.pi].pip;}
+function fxEquity(){if(!S.fx)return 0;return S.fx.acct+S.fx.positions.reduce((a,p)=>a+p.m+posPnl(p),0);}
+function fxCum(){if(!S.fx)return 0;return S.fx.cum+S.fx.positions.reduce((a,p)=>a+posPnl(p),0);}
+
+function marketStep(){
+  const target=fxI(S.t);
+  while(S.mkt.lastI<target){
+    S.mkt.lastI++;
+    PAIRS.forEach((p,pi)=>{const h=S.mkt.hist[pi];h.push(makeTick(p,h[h.length-1].c,S.mkt.lastI));if(h.length>HIST_CAP)h.splice(0,h.length-HIST_CAP);});
+    botsStep();
+    if(S.fx){checkLiq();fxViewMood();}
+    if(S.mkt.lastI%24===0)sigStep();
+  }
+}
+function checkLiq(){
+  for(const p of S.fx.positions.slice()){
+    const t=lastTk(p.pi),h=hsp(p.pi),lp=liqPx(p);let hit=false,ex=lp;
+    if(p.dir>0){const w=t.l-h;if(w<=lp){hit=true;if(t.k===1)ex=lp-(lp-w)*rnd(0.35,1);else if(t.k===2)ex=Math.min(lp,t.c-h);}}
+    else{const w=t.h+h;if(w>=lp){hit=true;if(t.k===1)ex=lp+(w-lp)*rnd(0.35,1);else if(t.k===2)ex=Math.max(lp,t.c+h);}}
+    if(hit)settlePos(p,ex,'liq',t.k);
+  }
+}
+function settlePos(p,ex,why,k,quiet){
+  const P=PAIRS[p.pi];const pnl=priceP(p,ex)+p.swap;
+  let back=p.m+pnl,def=0;if(back<0){def=-back;back=0;}
+  S.fx.acct+=back;S.fx.positions=S.fx.positions.filter(x=>x!==p);S.fx.cum+=pnl;S.stats.fxPnl+=pnl;
+  const d=p.dir>0?'多':'空';
+  const txt=`${P.sym} ${d} ${p.lev}×，保证金 ${yuan(p.m)}，${fmtPx(p.pi,p.entry)} → ${fmtPx(p.pi,ex)}`;
+  if(def>0){S.loan.on=true;S.loan.amt+=def;S.loanInviteSent=true;flow(`穿仓差额计入借款（${P.sym}）`,0,'fx');}
+  if(why==='liq'){
+    S.stats.liqs++;META.liqEver=true;mark('liq','第一次被强平');
+    toast(def>0?'穿仓':'强平',`${txt}。${def>0?`亏损超过保证金，差额 ${yuan(def)} 已计入借款。`:`退回 ${yuan(back)}。`}${k===1?' 成交价受行情跳动影响。':''}`,'bad');
+    diary(`${P.sym} 的仓位被强平了，亏了 ${yuan(-pnl)}。`);
+  }else if(!quiet)toast(`已平仓 ${P.sym}`,`${pnl>=0?'盈利':'亏损'} ${yuan(Math.abs(pnl))}`,pnl>=0?'gold':'warn');
+  S.fx.log.unshift({t:S.t,txt,pnl,why});if(S.fx.log.length>200)S.fx.log.pop();
+  if(!(curTab==='fx'&&running()))moneyMood(pnl);
+}
+function fxViewMood(){
+  if(curTab!=='fx'||!running()){S.fx.seen=null;return;}
+  const c=fxCum();if(S.fx.seen!=null){const d=c-S.fx.seen;if(Math.abs(d)>0.5)moneyMood(d);}S.fx.seen=c;
+}
+function fxDaily(){
+  let tot=0;for(const p of S.fx.positions){const f=p.N*PAIRS[p.pi].swap;p.swap-=f;tot+=f;}
+  if(tot>0)flow(`${S.fx.positions.length} 个持仓的隔夜费（计入持仓盈亏）`,0,'fx');
+}
+function botEq(b){if(!b.pos)return b.eq;const p=b.pos;return b.eq+p.m+priceP(p,closePx(p,mid(p.pi)))+p.swap;}
+function botsStep(){
+  const mk=S.mkt;const h=hourOf(S.t);
+  const newDay=mk.lastI%96===0, newWeek=mk.lastI%(96*7)===0;
+  for(const b of mk.bots){
+    if(newDay){b.st.day=botEq(b);b.tr.day=!!b.pos;}
+    if(newWeek){b.st.week=botEq(b);b.tr.week=!!b.pos;}
+    if(newDay&&b.pos){b.pos.swap-=b.pos.N*PAIRS[b.pos.pi].swap;}
+    const asleep=mod(h-b.sleep,24)<8;
+    if(b.pos){
+      const p=b.pos,t=lastTk(p.pi),hs=hsp(p.pi),lp=liqPx(p);
+      const worst=p.dir>0?t.l-hs:t.h+hs;
+      if(p.dir>0?worst<=lp:worst>=lp){const pnl=priceP(p,lp)+p.swap;b.eq+=Math.max(0,p.m+pnl);b.pos=null;continue;}
+      if(!asleep&&Math.random()<b.pClose){const pnl=posPnlBot(p);b.eq+=Math.max(0,p.m+pnl);b.pos=null;
+        if(pnl>300)mk.notices.unshift({t:S.t,text:`用户 ${b.ph} 在 ${PAIRS[p.pi].sym} 平仓获利 ${yuan(pnl)}`});if(mk.notices.length>30)mk.notices.pop();}
+    }else if(!asleep&&b.eq>50&&Math.random()<b.pOpen){
+      const pi=rint(0,PAIRS.length-1),dir=Math.random()<0.5?1:-1,m=b.eq*b.frac;const md=mid(pi);
+      b.eq-=m;b.pos={pi,dir,m,N:m*b.lev,entry:dir>0?md+hsp(pi):md-hsp(pi),swap:0,lev:b.lev};b.tr.day=b.tr.week=b.tr.all=true;
+    }
+  }
+  if(S.fx){
+    const hold=S.fx.positions.length>0;
+    if(newDay){S.fx.win.day={cum:fxCum(),cap:Math.max(fxEquity(),0),dep:0,tr:hold};}
+    if(newWeek){S.fx.win.week={cum:fxCum(),cap:Math.max(fxEquity(),0),dep:0,tr:hold};}
+  }
+}
+function posPnlBot(p){return priceP(p,closePx(p,mid(p.pi)))+p.swap;}
+function rankInfo(win){
+  const mk=S.mkt;if(!S.fx)return null;
+  const W_=S.fx.win[win];if(!W_||!W_.tr)return {none:true};
+  const cap=Math.max(100,W_.cap+W_.dep);const mine=(fxCum()-W_.cum)/cap;
+  const act=mk.bots.filter(b=>b.tr[win]&&botEq(b)>50);
+  if(!act.length)return {none:true};
+  const below=act.filter(b=>(botEq(b)-b.st[win])/b.st[win]<mine).length;
+  return {pct:below/act.length*100,n:act.length,mine};
+}
+function sigStep(){
+  const mk=S.mkt;
+  if(mk.sig){for(let pi=0;pi<PAIRS.length;pi++){const s=mk.sig[pi];mk.sigTotal++;if(Math.sign(mid(pi)-s.start)===s.dir)mk.sigHits++;}}
+  mk.sig=PAIRS.map((p,pi)=>({dir:Math.random()<0.5?1:-1,conf:rint(58,92),start:mid(pi),t:S.t}));
+}
+
+/* ================= 交易账户 ================= */
+function unlockFx(){
+  openModal({title:'汇通国际 · 开户',
+    body:`<p>开户免费。开户后可以从现金转入交易账户，用交易账户里的钱作为保证金开仓，随时可以转回现金。</p><div class="small" style="line-height:1.9">${rulesHTML()}</div>`,
+    ok:'开户',cancel:'再想想',
+    onOk:()=>{
+      S.fx={acct:0,positions:[],sel:0,tf:4,dir:1,cum:0,log:[],nextId:1,seen:null,win:{day:{cum:0,cap:0,dep:0,tr:false},week:{cum:0,cap:0,dep:0,tr:false},all:{cum:0,cap:0,dep:0,tr:false}},rankWin:'week'};
+      diary('开了一个交易账户。');mark('fxopen','开通交易账户');
+      setTab('fx');return null;
+    },
+    onCancel:()=>{S.fxDeclined++;S.fxInvited=false;}
+  });
+}
+function rulesHTML(){
+  return `报价：买入价 = 中间价 + 半个点差，卖出价 = 中间价 − 半个点差，开仓即承担点差。<br>
+隔夜费：每天零点按名义仓位对所有持仓收取，多空双向，计入该仓位的盈亏。<br>
+强平：某一仓位的浮动亏损（含隔夜费）达到该仓位保证金的 80% 时，系统按市价强制平仓；行情剧烈跳动时，成交价可能差于强平价。<br>
+穿仓：平仓亏损超过保证金的部分，计入你在随心借的借款。<br>
+保证金可以追加，追加后强平价相应远离。报价 7×24 小时连续。`;
+}
+function tradeGuard(){
+  if(!running()){toast('暂停中','行动要在继续之后进行','warn');return false;}
+  if(S.act&&S.act.kind==='sleep'){
+    openModal({title:'他正在睡觉',body:'<p>要叫醒他吗？叫醒后睡眠就中断了。</p>',ok:'叫醒',cancel:'让他睡',onOk:()=>{S.act=null;diary('半夜醒来看了一眼手机。');return null;}});
+    return false;
+  }
+  return true;
+}
+function fxDeposit(v){
+  if(!tradeGuard())return 'x';
+  if(!(v>=1))return '请输入金额';if(v>S.cash+0.001)return '现金不够';
+  S.cash-=v;S.fx.acct+=v;flow('转入交易账户',-v,'fx');S.stats.deposits+=v;S.day.dep+=v;
+  for(const w of ['day','week','all'])S.fx.win[w].dep+=v;
+  mark('dep','第一次向交易账户转入现金');return null;
+}
+function fxWithdraw(v){
+  if(!tradeGuard())return 'x';
+  if(!(v>=1))return '请输入金额';if(v>S.fx.acct+0.001)return '交易账户可用余额不够';
+  S.fx.acct-=v;S.cash+=v;flow('从交易账户转出',v,'fx');S.stats.withdraws+=v;S.day.wd+=v;return null;
+}
+function fxOpen(){
+  if(!tradeGuard())return;
+  const F=S.fx;const m=parseFloat($('#inMargin').value)||0;const lev=clamp(parseInt($('#inLev').value,10)||1,1,100);
+  if(m<100||m>F.acct+0.001){toast(m<100?'最低保证金 ¥100':'交易账户可用余额不够','','warn');return;}
+  const pi=F.sel,md=mid(pi),h=hsp(pi);const mm=Math.min(m,F.acct);
+  F.acct-=mm;const p={id:F.nextId++,pi,dir:F.dir,lev,m:mm,m0:mm,N:mm*lev,entry:F.dir>0?md+h:md-h,swap:0,t:S.t};
+  F.positions.push(p);S.stats.trades++;META.tradesEver++;
+  for(const w of ['day','week','all'])F.win[w].tr=true;
+  if(!F.win.all.cap)F.win.all.cap=0;
+  mark('trade','第一次开仓');
+  if(S.stats.trades===1)diary(`第一次开仓：${PAIRS[pi].sym}，${F.dir>0?'做多':'做空'}，${lev} 倍。`);
+  renderAll();
+}
+function fxClose(p){if(!tradeGuard())return;settlePos(p,closePx(p,mid(p.pi)),'close');renderAll();}
+function fxAddMargin(p){
+  if(!tradeGuard())return;
+  openModal({title:`追加保证金 · ${PAIRS[p.pi].sym} #${p.id}`,body:'<p>名义仓位不变，强平价离现价更远。</p>',
+    input:{def:Math.min(Math.floor(S.fx.acct),Math.round(p.m*0.5)),chips:[[100,'¥100'],[500,'¥500'],[Math.floor(S.fx.acct),'全部可用']]},
+    preview:v=>{if(!S.fx.positions.includes(p))return '这个仓位已经不在了。';if(!(v>0))return '';const q=Object.assign({},p,{m:p.m+v});return `强平价 ${fmtPx(p.pi,liqPx(p))} → <b>${fmtPx(p.pi,liqPx(q))}</b><br>距强平 ${Math.round(distPips(p))} 点 → <b>${Math.round(distPips(q))}</b> 点`;},
+    ok:'追加',onOk:v=>{if(!running())return '暂停中';if(!S.fx.positions.includes(p))return '这个仓位已经不在了';if(!(v>0))return '请输入金额';if(v>S.fx.acct+0.001)return '可用余额不够';S.fx.acct-=v;p.m+=v;return null;}});
+}
+function normCdf(x){const t=1/(1+0.2316419*Math.abs(x));const d=0.3989422804*Math.exp(-x*x/2);const pr=d*t*(0.31938153+t*(-0.356563782+t*(1.781477937+t*(-1.821255978+t*1.330274429))));return x>0?1-pr:pr;}
+
+/* ================= 新闻（与行情无关的独立过程） ================= */
+const INST=['某华尔街投行','某欧洲大行','某日系券商','某外资行','某头部券商研究所','某对冲基金'];
+const CB=['美联储','欧洲央行','日本央行','英国央行','澳洲联储','加拿大央行','瑞士央行'];
+function pm(){const m=gdate(S.t).getMonth();return m===0?12:m;}
+const f1=(a,b)=>rnd(a,b).toFixed(1);
+const NEWS=[
+  ()=>`${pick(CB)}${pick(['官员','管委','副主席'])}：${pick(['将根据数据决定下一步行动','当前政策立场是适当的','不排除任何选项','通胀前景仍有不确定性','需要更多数据才能判断'])}。`,
+  ()=>`【数据】美国${pm()}月非农就业人口公布 ${f1(-4,30)} 万，预期 ${f1(8,22)} 万。`,
+  ()=>`【数据】美国${pm()}月 CPI 年率 ${f1(1.8,3.6)}%，预期 ${f1(1.8,3.6)}%。`,
+  ()=>`【数据】欧元区${pm()}月制造业 PMI 初值 ${f1(44,53)}。`,
+  ()=>`【数据】中国${pm()}月官方制造业 PMI ${f1(48.5,51.5)}。`,
+  ()=>`【数据】日本${pm()}月贸易帐${Math.random()<0.5?'顺差':'逆差'} ${rint(800,9000)} 亿日元。`,
+  ()=>`日本财务省官员：正密切关注汇市动向，${pick(['过度波动是不可取的','必要时将采取适当措施'])}。`,
+  ()=>{const i=rint(0,PAIRS.length-1);return `${pick(INST)}：${PAIRS[i].sym} 若突破 ${fmtPx(i,mid(i)*(1+rnd(0.002,0.01)))} 阻力位，可能进一步走高；否则或将回落。`;},
+  ()=>{const i=rint(0,PAIRS.length-1);return `${pick(INST)}将年底 ${PAIRS[i].sym} 预测${pick(['上调','下调'])}至 ${fmtPx(i,mid(i)*(1+rnd(-0.04,0.04)))}。`;},
+  ()=>`国际油价${Math.random()<0.5?'上涨':'下跌'} ${f1(0.3,3)}%，交易员关注${pick(['中东局势','库存数据','产油国会议'])}。`,
+  ()=>`本市${pick(['地铁新线','老旧小区改造','菜市场升级','公园翻新'])}项目${pick(['开工','完工','进入公示'])}。`,
+  ()=>`${pick(['本市','省内'])}${pick(['房价','二手房成交量','租金'])}${pick(['环比微涨','环比微跌','基本持平'])}。`,
+  ()=>`${pick(['流感','诺如病毒'])}进入高发期，卫生部门提醒注意${pick(['勤洗手','开窗通风','规律作息'])}。`,
+  ()=>`${pick(['某外卖平台','某网约车平台'])}调整${pick(['骑手配送费','司机抽成'])}规则，${pick(['引发讨论','下月起执行'])}。`,
+  ()=>`${pick(INST)}：本周市场波动可能${pick(['加大','减小'])}，建议投资者${pick(['保持谨慎','关注风险'])}。`,
+];
+function newsStep(){
+  if(!S.nextNews)S.nextNews=S.t+rnd(60,180);
+  if(S.t>=S.nextNews){S.news.unshift({t:S.t,text:pick(NEWS)()});if(S.news.length>40)S.news.pop();S.nextNews=S.t+rnd(60,180);}
+}
+
+/* ================= 渲染工具 ================= */
+function setHTML(el,html){if(!el)return;if(el._h!==html){el._h=html;el.innerHTML=html;}}
+function keyed(box,items,key,make,update){
+  const want=new Set(items.map(key));
+  for(const ch of Array.from(box.children)){if(ch.dataset&&ch.dataset.k&&!want.has(ch.dataset.k))ch.remove();}
+  for(const it of items){let el=box.querySelector(`[data-k="${key(it)}"]`);if(!el){el=make(it);el.dataset.k=key(it);box.appendChild(el);}update(el,it);}
+}
+function toast(title,text,kind){
+  const box=$('#toasts');const el=document.createElement('div');el.className='toast '+(kind||'');
+  el.innerHTML=`<b>${esc(title)}</b>${text?`<span>${esc(text)}</span>`:''}`;box.appendChild(el);
+  while(box.children.length>4)box.firstElementChild.remove();
+  setTimeout(()=>el.classList.add('out'),4600);setTimeout(()=>el.remove(),5100);
+}
+function openModal(o){
+  M=o;const b=$('#mbox');b.className='mbox'+(o.wide?' wide':'');
+  let h=`<h2>${esc(o.title)}</h2>${o.body||''}`;
+  if(o.input){h+=`<div class="mfield"><span class="muted">¥</span><input id="mIn" type="number" inputmode="decimal" min="0" step="any" value="${o.input.def!=null?o.input.def:''}"></div><div class="chips" id="mChips">${(o.input.chips||[]).map(c=>`<button type="button" data-v="${c[0]}">${c[1]}</button>`).join('')}</div><div class="mprev" id="mPrev"></div>`;}
+  h+=`<div class="merr" id="mErr"></div><div class="macts">${o.cancel!==false?`<button class="btn ghost" id="mCancel" type="button">${o.cancel||'取消'}</button>`:''}${o.ok!==false?`<button class="btn primary" id="mOk" type="button">${o.ok||'确定'}</button>`:''}${o.extra||''}</div>`;
+  b.innerHTML=h;$('#modal').hidden=false;
+  if(o.input){const i=$('#mIn');i.addEventListener('input',updPrev);$('#mChips').addEventListener('click',e=>{const c=e.target.closest('button');if(c){i.value=c.dataset.v;updPrev();}});updPrev();setTimeout(()=>{i.focus();i.select();},30);}
+  const ok=$('#mOk');if(ok)ok.addEventListener('click',modalOk);
+  const ca=$('#mCancel');if(ca)ca.addEventListener('click',()=>{const f=M&&M.onCancel;closeModal();if(f)f();renderAll();});
+  if(o.onOpen)o.onOpen(b);
+}
+function updPrev(){if(M&&M.preview&&$('#mPrev'))$('#mPrev').innerHTML=M.preview(parseFloat($('#mIn').value));}
+function modalOk(){
+  if(!M)return;const v=M.input?parseFloat($('#mIn').value):null;
+  const err=M.onOk?M.onOk(v):null;
+  if(err){if(err!=='x')$('#mErr').textContent=err;return;}
+  closeModal();renderAll();
+}
+function closeModal(){$('#modal').hidden=true;M=null;}
+
+/* ================= 标签页 ================= */
+function tabList(){
+  const t=[['home','家'],['food','吃饭'],['work','工作'],['shop','商店']];
+  if(S.loan.on)t.push(['loan','随心借']);
+  if(S.fx)t.push(['fx','交易']);
+  t.push(['ledger','账本']);return t;
+}
+function renderTabs(){
+  const list=tabList();
+  const dot={home:S.viruses.length>0,work:!!(S.job&&curTab!=='work'&&((S.job.items&&S.job.items.length)||(S.job.active&&S.job.active.some(o=>o.arrived!=null))||(S.job.tasks&&S.job.tasks.length>2)))};
+  setHTML($('#tabs'),list.map(([k,n])=>`<button class="tab${k===curTab?' on':''}" data-tab="${k}" type="button">${n}${dot[k]?'<span class="dot"></span>':''}</button>`).join(''));
+}
+function setTab(t){
+  if(t==='fx'&&S.fx)S.fx.seen=null;
+  curTab=t;$$('.view').forEach(v=>v.classList.toggle('on',v.dataset.view===t));hover=null;renderAll();
+  window.scrollTo({top:0});
+}
+
+/* ================= 顶栏 ================= */
+function renderHeader(){
+  $('#hDay').textContent=`第 ${dayOf(S.t)} 天`;
+  $('#hTime').textContent=`${fmtDate(S.t)} ${hm(S.t)}`;
+  const w=WEATHER[W()];$('#hWeather').textContent=`${w.i} ${w.n}`;
+  $('#hCash').textContent=yuan(S.cash);
+  const debt=debtTotal();$('#hDebtW').hidden=!(debt>0.005);$('#hDebt').textContent=yuan(debt);
+  $('#hFxW').hidden=!S.fx;if(S.fx)$('#hFx').textContent=yuan(fxEquity());
+  $('#btnPause').textContent=S.paused?'继续':'暂停';$('#btnPause').className='btn sm'+(S.paused?' primary':'');
+  $$('#speedSeg button').forEach(b=>b.classList.toggle('on',+b.dataset.s===S.speed));
+  $('#pausedBar').hidden=!S.paused;
+  document.documentElement.style.setProperty('--hdr-h',$('#top').offsetHeight+'px');
+  renderBadge();
+}
+function renderBadge(){const n=S.inbox.filter(m=>!m.seen||(!m.done&&m.choices)).length;const b=$('#inboxBadge');b.hidden=!n;b.textContent=n;}
+function renderInbox(){
+  const box=$('#inbox');if(box.hidden)return;
+  setHTML(box,S.inbox.length?S.inbox.map(m=>`<div class="msg${m.done&&m.choices?' done':''}"><span class="from">${esc(m.from)}</span><span class="when">${stamp(m.t)}</span><div>${esc(m.text)}</div>${m.choices?(m.done?`<div class="small muted">已处理</div>`:`<div class="mbtns">${m.choices.map(c=>`<button class="btn sm" type="button" data-m="${m.id}" data-c="${c[1]}">${c[0]}</button>`).join('')}${m.exp?`<span class="small muted">${Math.max(0,Math.ceil((m.exp-S.t)/60))} 小时内</span>`:''}</div>`):''}</div>`).join(''):'<div class="empty">没有消息。</div>');
+}
+
+/* ================= 家 ================= */
+function avatarSVG(){
+  const a=S.act,H=S.house,sleeping=a&&a.kind==='sleep',away=a&&(a.kind==='work'||a.out);
+  const wall={bed:'#d8d3c6',room:'#e7ddc9',flat:'#e5d4b6',own:'#d7e4d3'}[H];
+  const sky={sun:'#9fd0f0',cloud:'#c3d3de',rain:'#8d9aa6',hot:'#f3c58a',cold:'#c9dcee'}[W()];
+  const hr=hourOf(S.t),night=hr>=19||hr<6;
+  let s=`<rect width="360" height="230" fill="${wall}"/><rect y="168" width="360" height="62" fill="#b7987a"/><rect y="166" width="360" height="4" fill="#9c7f63"/>`;
+  if(night)s+=`<rect width="360" height="230" fill="#1b2340" opacity=".28"/>`;
+  if(H!=='bed')s+=`<rect x="140" y="30" width="80" height="62" rx="4" fill="${night?'#27335a':sky}" stroke="#fff" stroke-width="5"/><line x1="180" y1="30" x2="180" y2="92" stroke="#fff" stroke-width="3"/>`;
+  else s+=`<rect x="150" y="36" width="44" height="30" rx="3" fill="${night?'#27335a':sky}" stroke="#eee" stroke-width="4"/>`;
+  // 床
+  if(H==='bed'){s+=`<rect x="12" y="70" width="110" height="10" fill="#7a6a58"/><rect x="12" y="130" width="110" height="12" fill="#7a6a58"/><rect x="12" y="60" width="6" height="110" fill="#6a5a48"/><rect x="116" y="60" width="6" height="110" fill="#6a5a48"/><rect x="18" y="118" width="98" height="12" fill="#dfe3e8"/><rect x="18" y="58" width="98" height="12" fill="#c9ced6"/>`;}
+  else{const mat=has('bed')?'#f4f1ea':'#e3e1da';s+=`<rect x="14" y="128" width="120" height="16" rx="3" fill="#8b6f55"/><rect x="18" y="${has('bed')?110:116}" width="112" height="${has('bed')?20:14}" rx="5" fill="${mat}"/><rect x="14" y="98" width="10" height="46" rx="2" fill="#8b6f55"/><rect x="22" y="106" width="30" height="12" rx="5" fill="#fff"/>`;}
+  if(has('tv')||owns('tv')){const on=a&&a.id==='tv';s+=`<rect x="262" y="58" width="78" height="48" rx="4" fill="#23262b"/><rect x="266" y="62" width="70" height="40" rx="2" fill="${on?'#7fb7e6':owns('tv')&&!has('tv')?'#3a3a3a':'#2f343b'}"/><rect x="296" y="106" width="10" height="10" fill="#23262b"/>`;}
+  if(owns('washer'))s+=`<rect x="300" y="128" width="42" height="42" rx="5" fill="#f2f4f5" stroke="#c9ced3"/><circle cx="321" cy="150" r="11" fill="#b8d6ea" stroke="#9aa6b0"/>`;
+  if(H==='own')s+=`<rect x="236" y="150" width="18" height="20" fill="#a0673e"/><circle cx="245" cy="140" r="14" fill="#4f9a5c"/>`;
+  if(H==='flat'||H==='own')s+=`<rect x="160" y="140" width="90" height="26" rx="8" fill="#6f8fa8"/>`;
+  if(away){
+    s+=`<text x="200" y="140" text-anchor="middle" font-size="13" fill="#5b5146">${esc(a.kind==='work'?'在'+JOBS[a.id].place+'上班':'出门了：'+a.name.replace(/^吃饭：/,''))}</text><text x="200" y="118" text-anchor="middle" font-size="26">${a.emoji||''}</text>`;
+  }else if(sleeping){
+    const bx=H==='bed'?60:70,by=H==='bed'?112:(has('bed')?104:110);
+    s+=`<rect x="${bx-8}" y="${by+2}" width="72" height="14" rx="7" fill="${topColor()}"/><circle cx="${bx-14}" cy="${by+6}" r="11" fill="#f1c9a2"/><path d="M${bx-24} ${by+2} q10 -12 20 -2" fill="#3b2f2a"/><text x="${bx+30}" y="${by-14}" font-size="16" fill="#5d6d8a">Z z</text>`;
+  }else{
+    const x=205,lv=S.mood.lv;const face=['M-6 6 Q0 0 6 6','M-6 5 Q0 2 6 5','M-6 4 L6 4','M-6 2 Q0 8 6 2','M-7 1 Q0 10 7 1'][lv];
+    s+=`<rect x="${x-12}" y="138" width="10" height="30" rx="3" fill="#3f4a5a"/><rect x="${x+2}" y="138" width="10" height="30" rx="3" fill="#3f4a5a"/>`;
+    s+=`<rect x="${x-19}" y="92" width="38" height="50" rx="10" fill="${topColor()}"/>`;
+    if(S.wear.top==='shirt')s+=`<path d="M${x-19} 108 h38 M${x-19} 124 h38 M${x-6} 92 v50 M${x+7} 92 v50" stroke="#2c4a6e" stroke-width="2" opacity=".5"/>`;
+    s+=`<rect x="${x-27}" y="96" width="9" height="36" rx="4" fill="${topColor()}"/><rect x="${x+18}" y="96" width="9" height="36" rx="4" fill="${topColor()}"/>`;
+    s+=`<circle cx="${x}" cy="74" r="20" fill="#f1c9a2"/><path d="M${x-20} 70 q4 -26 26 -20 q14 4 14 20 q-10 -10 -24 -8 q-10 2 -16 8z" fill="#3b2f2a"/>`;
+    s+=lv===0?`<path d="M${x-9} 72 h5 M${x+4} 72 h5" stroke="#2b2b2b" stroke-width="2"/>`:`<circle cx="${x-7}" cy="72" r="2.2" fill="#2b2b2b"/><circle cx="${x+7}" cy="72" r="2.2" fill="#2b2b2b"/>`;
+    s+=`<path transform="translate(${x} 80)" d="${face}" stroke="#7a3b2e" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+    if(lv===4||S.flu)s+=`<circle cx="${x-11}" cy="80" r="3.5" fill="#f08a8a" opacity=".6"/><circle cx="${x+11}" cy="80" r="3.5" fill="#f08a8a" opacity=".6"/>`;
+    const acc=S.wear.acc;
+    if(acc==='cap')s+=`<path d="M${x-20} 62 q20 -24 40 0 z" fill="${ITEMS.cap.color}"/><rect x="${x}" y="58" width="26" height="5" rx="2" fill="${ITEMS.cap.color}"/>`;
+    if(acc==='scarf')s+=`<rect x="${x-17}" y="90" width="34" height="9" rx="4" fill="${ITEMS.scarf.color}"/><rect x="${x+6}" y="94" width="8" height="20" rx="3" fill="${ITEMS.scarf.color}"/>`;
+    if(a&&a.emoji)s+=`<g transform="translate(${x+34} 44)"><rect x="-4" y="-18" width="30" height="26" rx="8" fill="#fff" opacity=".9"/><text x="11" y="1" text-anchor="middle" font-size="16">${a.emoji}</text></g>`;
+    if(S.flu&&!a)s+=`<text x="${x-40}" y="60" font-size="16">🤧</text>`;
+  }
+  return s;
+}
+function topColor(){const t=S.wear.top;return t&&ITEMS[t]?ITEMS[t].color:OLD_TOP.color;}
+function rateText(r){const n={nut:'饮食',energy:'精力',act:'活动',clean:'清洁',mood:'心情'};return Object.keys(r).map(k=>`${n[k]}${r[k]>0?'+':''}${r[k]}/时`).join(' ');}
+function renderHome(){
+  setHTML($('#avatar'),avatarSVG());
+  renderHomeLive();
+  // 行动
+  const groups={};for(const id in ACTS){const A=ACTS[id];(groups[A.g]=groups[A.g]||[]).push(id);}
+  let h='';
+  for(const g in groups){
+    h+=`<div class="agroup"><h4>${g}</h4><div class="agrid">`;
+    for(const id of groups[g]){
+      const A=ACTS[id];const why=actReason(id);
+      if(id==='tv'&&!owns('tv'))continue;if(id==='hobby'&&S.mood.lv<3)continue;if(id==='friend'&&S.mood.lv<2)continue;
+      let eff=A.desc||'';if(!eff&&A.rate)eff=rateText(A.rate);if(!eff&&A.eff)eff=Object.keys(A.eff).map(k=>`${BAR_NAMES[k]}+${A.eff[k]}`).join(' ');
+      const s=A.rate&&A.rate.mood>0?sat('act_'+id):1;
+      h+=`<button class="abtn" type="button" data-act="${id}" ${why?'disabled':''}><b>${A.name}</b><small>${A.min>=60?A.min/60+' 小时':A.min+' 分钟'}${A.cost?` · ${yuan(A.cost)}`:''}</small><small>${eff}${s<0.99?'（今天做过，心情加成减弱）':''}</small>${why?`<small class="why">${why}</small>`:''}</button>`;
+    }
+    h+='</div></div>';
+  }
+  setHTML($('#acts'),h);
+  $('#actHint').textContent=S.paused?'暂停中，只能查看':'';
+  // 状态
+  $('#pName').textContent=`${S.name}（第 ${S.gen} 代）`;$('#pHouse').textContent=HOUSES[S.house].name;
+  const wk=weakest();
+  setHTML($('#bars'),['nut','energy','act','clean'].map(k=>{const v=S.bars[k];return `<div class="bar"><span class="lab">${BAR_NAMES[k]}</span><span class="track${v<30?' low':''}${k===wk?' weak':''}"><i style="width:${v}%"></i></span><span class="val">${Math.round(v)}${k===wk?' 短板':''}</span></div>`;}).join(''));
+  $('#moodName').textContent=MOOD_NAMES[S.mood.lv];
+  setHTML($('#moodPills'),[0,1,2,3,4].map(i=>`<span class="${i<=S.mood.lv?'on':''}"></span>`).join(''));
+  $('#moodBar').style.width=S.mood.v+'%';$('#moodVal').textContent=Math.round(S.mood.v)+(S.mood.hi>0?' ↑':'');
+  const hl=hlvOf(S.health);$('#healthName').textContent=HEALTH_NAMES[hl];
+  $('#healthBar').style.width=S.health+'%';$('#healthVal').textContent=S.health.toFixed(1);
+  const hr=healthRate()*24;$('#healthTrend').textContent=`照现在的状态，每天 ${hr>=0?'+':'−'}${Math.abs(hr).toFixed(1)}`;
+  const since=(S.t-S.lastMeal)/60;
+  let st=`上一顿：${since<1?'刚吃过':Math.floor(since)+' 小时前'}${since>6?'（饿了）':''} · 厨艺 ${Math.floor(S.skills.cook)} · 办公技能 ${Math.floor(S.skills.study)}`;
+  if(S.flu)st+=` · ${S.flu.stage==='sign'?'有点感冒的迹象':'感冒中'}`;
+  if(S.goal){const g=gapDays();st+=`<br>目标：${S.goal.name}，还差 ${yuan(Math.max(0,S.goal.amount-S.cash))}${isFinite(g)&&g>0?`，按最近的结余约 ${Math.ceil(g)} 天`:g===Infinity?'，按最近的结余攒不下来':''}`;}
+  setHTML($('#statline'),st);
+  // 衣柜
+  const wears=Object.keys(S.items).filter(id=>ITEMS[id].cat==='wear');
+  setHTML($('#wardrobe'),`<button class="wear${!S.wear.top?' on':''}" type="button" data-wear=""><i style="background:${OLD_TOP.color}"></i>${OLD_TOP.name}</button>`+wears.map(id=>`<button class="wear${S.wear[ITEMS[id].slot]===id?' on':''}" type="button" data-wear="${id}"><i style="background:${ITEMS[id].color}"></i>${ITEMS[id].name}</button>`).join('')+(wears.length?'':'<span class="small muted" style="align-self:center">在商店可以买衣服。</span>'));
+  // 日记
+  $('#keepCount').textContent=S.keeps.length?`纪念物 ${S.keeps.length} 件`:'';
+  setHTML($('#diary'),S.diary.slice(0,60).map(d=>`<div><span>${stamp(d.t)}</span>${esc(d.text)}</div>`).join(''));
+  // 电视
+  const tvc=$('#tvCard');tvc.hidden=!owns('tv');
+  if(owns('tv')){
+    if(!has('tv')){$('#tvState').textContent='坏了';setHTML($('#forecast'),'电视坏了，修好之前看不了。');setHTML($('#newsList'),'');}
+    else{$('#tvState').textContent='';const f=WEATHER[S.weather.fc];setHTML($('#forecast'),`<span style="font-size:24px">${f.i}</span><span>天气预报：明天<b>${f.n}</b></span>`);
+      setHTML($('#newsList'),S.news.slice(0,12).map(n=>`<div><span>${stamp(n.t)}</span>${esc(n.text)}</div>`).join('')||'<div class="muted">还没有新闻。</div>');}
+  }
+}
+function renderHomeLive(){
+  const a=S.act;
+  if(a){const el=S.t-a.start;const p=a.kind==='sleep'&&a.full?Math.max(el/a.dur,S.bars.energy/100):el/a.dur;$('#actProg').style.width=Math.min(100,p*100)+'%';$('#actTxt').textContent=`${a.emoji||''} ${a.name}`;}
+  else{$('#actProg').style.width='0%';$('#actTxt').textContent='空闲';}
+  $('#actCancel').hidden=!a;$('#actCancel').disabled=S.paused;
+  keyed($('#vlayer'),S.viruses,v=>String(v.id),v=>{const b=document.createElement('button');b.className='virus';b.type='button';b.textContent='🦠';b.setAttribute('aria-label','病毒');b.addEventListener('click',()=>killVirus(v.id));return b;},(el,v)=>{el.style.left=v.x+'%';el.style.top=v.y+'%';});
+}
+
+/* ================= 吃饭 ================= */
+function renderFood(){
+  const since=(S.t-S.lastMeal)/60;
+  setHTML($('#foodTop'),`<span>上一顿：<b>${since<1?'刚吃过':Math.floor(since)+' 小时前'}</b>${since>6?' <span class="warn">饿了</span>':''}</span><span>饮食 <b>${Math.round(S.bars.nut)}</b></span><span>厨艺 <b>${Math.floor(S.skills.cook)}</b></span><span>${has('cooker')?'有电饭煲':'没有电饭煲'} · ${has('pan')?'有好锅':'普通锅'}${HOUSES[S.house].cookExtra?' · 公共厨房要排队':''}</span><span>${S.subs.takeout?'外卖会员中':''}</span>`);
+  const cols=['cook','instant','out','deliv'];
+  let h=`<thead><tr><th>每餐</th>${cols.map(c=>`<th>${MODES[c]}</th>`).join('')}</tr></thead><tbody>`;
+  TIERS.forEach((tn,ti)=>{
+    h+=`<tr><td class="tier">${tn}</td>`;
+    for(const c of cols){
+      const opts=FOODS.filter(f=>f.tier===ti&&f.mode===c);
+      h+=`<td>${opts.map(f=>{const why=foodReason(f);const s=sat('food_'+f.id);const mg=f.mood*s;
+        return `<button class="fopt" type="button" data-food="${f.id}" ${why?'disabled':''}><b>${f.name}</b><span class="meta"><span class="num">${yuan(foodCost(f))}</span><span>${foodTime(f)} 分钟</span><span>营养 <span class="num">${foodQ(f)}</span></span><span>心情 <span class="num">+${mg.toFixed(mg<1&&mg>0?1:0)}</span>${s<0.99?'（今天吃过）':''}</span></span>${f.note?`<span class="meta">${f.note}</span>`:''}${why?`<span class="why">${why}</span>`:''}</button>`;}).join('')}</td>`;
+    }
+    h+='</tr>';
+  });
+  setHTML($('#ftable'),h+'</tbody>');
+}
+
+/* ================= 工作 ================= */
+function renderWork(){
+  let h='';
+  for(const id of JOB_ORDER){
+    const J=JOBS[id];const why=jobReason(id);const on=S.job&&S.job.id===id;
+    if(id==='office'&&!owns('suit')&&S.skills.study<5&&!S.firsts.job_office){}
+    h+=`<div class="job${on?' on':''}"><div class="jhead"><b>${J.emoji} ${J.name}</b><span class="small muted">${J.place} · 一班 ${J.hours} 小时 · 熟练度 ${Math.floor(S.skills[id])}</span></div>
+      <div class="jmeta">${J.pay}<br>${J.attn}<br>${J.quit}<br>每小时额外消耗：${Object.keys(J.ex).filter(k=>J.ex[k]).map(k=>`${({energy:'精力',act:'活动',clean:'清洁',mood:'心情'})[k]}${J.ex[k]>0?'+':''}${J.ex[k]}`).join(' ')}</div>
+      ${why&&!on?`<div class="jreq">${why}</div>`:''}<button class="btn sm${on?'':' primary'}" type="button" data-job="${id}" ${why||on?'disabled':''}>${on?'上班中':'开工'}</button></div>`;
+  }
+  if(S.fx)h+=`<div class="job"><div class="jhead"><b>📈 外汇交易</b><span class="small muted">在家 · 没有班次</span></div><div class="jmeta">用交易账户里的钱作为保证金开仓。没有下班时间，离开页面后持仓依然存在。</div><button class="btn sm" type="button" data-gofx="1">打开交易终端</button></div>`;
+  setHTML($('#jobs'),h);
+  renderWorkLive();
+}
+function renderWorkLive(){
+  const j=S.job,body=$('#shiftBody');
+  if(!j){
+    $('#shiftTitle').textContent='还没有开工';
+    const L=S.lastShift;
+    setHTML(body,`<div class="empty">${L?`上一班：${JOBS[L.id].name}，${L.interrupted?'中途离开，':''}到手 ${yuan(L.total)}${L.missed?`，错过 ${L.missed} 次`:''}。<br><br>`:''}在左边选一份工作开工。上班期间离开这个页面，工作不会停，但需要你处理的事情会错过。</div>`);
+    body._mode=null;return;
+  }
+  const J=JOBS[j.id],a=S.act;const el=S.t-a.start;
+  $('#shiftTitle').innerHTML=`${J.emoji} ${J.name} <small>还剩 ${Math.max(0,Math.ceil((a.dur-el)/60*10)/10)} 小时</small>`;
+  if(body._mode!==j.id){
+    body._mode=j.id;
+    let stage='';
+    if(j.id==='flyer')stage=`<div class="stage" id="stg"></div>`;
+    if(j.id==='cashier')stage=`<div class="stage" id="stg" style="overflow:auto"></div>`;
+    if(j.id==='site')stage=`<div class="stage" id="stg" style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px"><div style="font-size:48px">🧱</div><div class="num" id="siteN"></div><div class="small muted">不用操作。累了会干得慢一些。</div></div>`;
+    if(j.id==='rider')stage=`<div class="stage" id="stg" style="overflow:auto;height:auto;min-height:240px"><div class="small muted" style="padding:8px 10px">新订单</div><div id="offers"></div><div class="small muted" style="padding:8px 10px">配送中（最多两单）</div><div id="active"></div></div>`;
+    if(j.id==='office')stage=`<div class="stage" id="stg" style="overflow:auto;height:220px"></div><div class="typebox"><input id="typeIn" placeholder="照着第一条输入，然后回车" autocomplete="off"><button class="btn sm" type="button" id="typeGo">录入</button></div>`;
+    body.innerHTML=`<div class="actbox" style="border-top:0"><div class="prog"><i id="shiftProg"></i></div><button class="btn sm ghost" type="button" id="shiftQuit">中途离开</button></div>${stage}<div class="jstats" id="jstats"></div>`;
+    $('#shiftQuit').addEventListener('click',()=>{if(!running()){toast('暂停中','','warn');return;}stopAct();});
+    if(j.id==='office'){const inp=$('#typeIn');const go=()=>{if(officeType(inp.value)){inp.value='';renderWorkLive();}else if(inp.value)toast('没对上','要和第一条完全一样','warn');};inp.addEventListener('keydown',e=>{if(e.key==='Enter')go();});$('#typeGo').addEventListener('click',go);}
+  }
+  $('#shiftProg').style.width=Math.min(100,el/a.dur*100)+'%';
+  $('#shiftQuit').disabled=S.paused;
+  const stg=$('#stg');
+  if(j.id==='flyer')keyed(stg,j.items,it=>String(it.id),it=>{const b=document.createElement('button');b.className='tgt';b.type='button';b.innerHTML=`${it.e}<small>递传单</small>`;b.addEventListener('click',()=>jobClick('flyer',it.id));return b;},(el2,it)=>{el2.style.left=it.x+'%';el2.style.top=it.y+'%';el2.style.opacity=Math.max(0.35,1-(S.t-it.born)/22);});
+  if(j.id==='cashier')keyed(stg,j.items,it=>String(it.id),it=>{const d=document.createElement('div');d.className='qitem';d.innerHTML=`<span style="font-size:22px">${it.e}</span><span class="tbar"><i></i></span><button class="btn sm primary" type="button">结账</button>`;d.querySelector('button').addEventListener('click',()=>jobClick('cash',it.id));return d;},(el2,it)=>{const r=1-(S.t-it.born)/it.win;const i=el2.querySelector('i');i.style.width=Math.max(0,r*100)+'%';i.className=r<0.35?'low':'';});
+  if(j.id==='site')$('#siteN').textContent=`已经搬了 ${j.n} 趟`;
+  if(j.id==='rider'){
+    keyed($('#offers'),j.offers,o=>String(o.id),o=>{const d=document.createElement('div');d.className='qitem';d.innerHTML=`<span>📦</span><span class="grow" style="flex:1"></span><button class="btn sm primary" type="button">接单</button>`;d.querySelector('button').addEventListener('click',()=>jobClick('take',o.id));return d;},(el2,o)=>{el2.querySelector('.grow').textContent=`${yuan(o.pay)} · 约 ${o.dist} 分钟 · ${Math.max(0,Math.ceil(12-(S.t-o.born)))} 分钟后消失`;});
+    keyed($('#active'),j.active,o=>String(o.id),o=>{const d=document.createElement('div');d.className='qitem';d.innerHTML=`<span>🛵</span><span class="tbar"><i></i></span><span class="small lbl"></span><button class="btn sm primary" type="button">送达</button>`;d.querySelector('button').addEventListener('click',()=>jobClick('deliver',o.id));return d;},(el2,o)=>{const arr=o.arrived!=null;el2.querySelector('i').style.width=(arr?100:Math.max(0,100-o.left/o.total*100))+'%';el2.querySelector('.lbl').textContent=arr?`到了，${Math.max(0,Math.ceil(10-(S.t-o.arrived)))} 分钟内确认`:yuan(o.pay);el2.querySelector('button').disabled=!arr;});
+  }
+  if(j.id==='office')setHTML(stg,j.tasks.length?j.tasks.map((t,i)=>`<div class="qitem" style="${i===0?'border-color:var(--acc)':''}"><span class="num">${esc(t.text)}</span></div>`).join('')+(j.tasks.length>6?'<div class="small warn" style="padding:0 10px 8px">积压太多了，表现在下降。</div>':''):'<div class="empty">暂时没有文件。</div>');
+  const base=j.basePay,extra=j.pay;
+  setHTML($('#jstats'),`<span>已干 <b>${(el/60).toFixed(1)} 小时</b></span><span>底薪 <b>${yuan(base)}</b></span><span>${j.id==='rider'?'单费':'额外'} <b>${yuan(extra)}</b></span><span>${({flyer:'递出',cashier:'结账',site:'搬运',rider:'送达',office:'录入'})[j.id]} <b>${j.n}</b></span>${j.missed?`<span>错过 <b>${j.missed}</b></span>`:''}${S.bars.energy<25?'<span class="warn">太累了，效率下降</span>':''}`);
+}
+
+/* ================= 商店 ================= */
+function renderShop(){
+  $('#houseNow').textContent='现在：'+HOUSES[S.house].name;
+  setHTML($('#houses'),Object.keys(HOUSES).filter(k=>k!=='own').map(k=>{const H=HOUSES[k];const why=moveReason(k);return `<div class="li"><div class="grow"><b>${H.name}</b><small>${H.desc} · 房租 ${yuan(H.rent)}/天</small></div>${k===S.house?'<span class="tag acc">现在住这里</span>':`<button class="btn sm" type="button" data-move="${k}" ${why?`disabled title="${why}"`:''}>搬过去</button>`}</div>`;}).join('')+(S.house==='own'?`<div class="li"><div class="grow"><b>自己的房子</b><small>不用交房租${S.mort?`，房贷每天 ${yuan(MORT_DAILY)}`:''}</small></div><span class="tag acc">现在住这里</span></div>`:''));
+  let g='';
+  const down=HOUSE_PRICE*DOWN_RATE;
+  if(S.house==='own')g='';
+  else if(S.goal){const gd=gapDays();g=`<div class="small" style="line-height:1.8">目标：<b>买房</b>，总价 ${yuan(HOUSE_PRICE)}，首付 ${yuan(down)}。房贷每天约 ${yuan(MORT_DAILY)}。<br>现在有 ${yuan(S.cash)}，还差 ${yuan(Math.max(0,down-S.cash))}。${isFinite(gd)&&gd>0?`按最近 7 天的结余，大约还要 ${Math.ceil(gd)} 天。`:gd===Infinity?'按最近的结余，攒不下来。':''}</div><div style="display:flex;gap:8px;margin-top:8px"><button class="btn sm gold" type="button" id="btnBuyHouse" ${S.cash<down?'disabled':''}>付首付买房</button><button class="btn sm ghost" type="button" id="btnDropGoal">不定这个目标了</button></div>`;}
+  else if(dayOf(S.t)>=5&&HOUSES[S.house].rank>=1)g=`<div class="small muted" style="line-height:1.8">附近的房子总价约 ${yuan(HOUSE_PRICE)}，首付三成。</div><button class="btn sm" type="button" id="btnGoal" style="margin-top:6px">把买房定为目标</button>`;
+  else g='<div class="small muted">住得稳定一些之后，也许可以考虑买房。</div>';
+  setHTML($('#houseGoal'),g);
+  const row=(id)=>{const I=ITEMS[id];const why=buyReason(id);return `<div class="li"><div class="grow"><b>${I.name}</b>${I.desc?`<small>${I.desc}</small>`:''}</div><span class="price">${yuan(I.price)}</span><button class="btn sm" type="button" data-buy="${id}" ${why?`disabled title="${why}"`:''}>${owns(id)&&!I.use?'已有':'买'}</button></div>`;};
+  setHTML($('#tools'),Object.keys(ITEMS).filter(id=>ITEMS[id].cat==='tool').map(row).join(''));
+  setHTML($('#clothes'),Object.keys(ITEMS).filter(id=>ITEMS[id].cat==='wear').map(row).join(''));
+  setHTML($('#goods'),Object.keys(ITEMS).filter(id=>ITEMS[id].cat==='good').map(row).join(''));
+  const mine=Object.keys(S.items);
+  setHTML($('#mine'),(mine.map(id=>{const I=ITEMS[id],it=S.items[id];return `<div class="li"><div class="grow"><b>${I.name}</b><small>${it.broken?'坏了 · ':''}买于第 ${dayOf(it.t)} 天</small></div>${it.broken?`<button class="btn sm" type="button" data-repair="${id}">修 ${yuan(Math.round(I.price*0.3))}</button>`:''}<button class="btn sm ghost" type="button" data-sell="${id}">卖 ${yuan(sellValue(id))}</button></div>`;}).join('')+S.keeps.map(k=>`<div class="li"><div class="grow"><b>${esc(k.name)}</b><small>纪念物 · 第 ${k.gen} 代</small></div><button class="btn sm ghost" type="button" data-sellk="${k.id}">卖 ${yuan(k.val)}</button></div>`).join(''))||'<div class="empty">还没有什么东西。</div>');
+  setHTML($('#subs'),Object.keys(SUBS).filter(id=>SUBS[id].need!=='fx'||S.fx).map(id=>{const D=SUBS[id],s=S.subs[id];const need=D.need==='tv'&&!owns('tv');return `<div class="li"><div class="grow"><b>${D.name}</b><small>${D.desc} · ${yuan(D.price)}/${D.period===7?'周':'月'}${s?` · 下次扣费 ${stamp(s.next)}${s.cancel?'（已取消续费）':''}`:''}</small></div>${s?`<button class="btn sm ghost" type="button" data-unsub="${id}">${s.cancel?'恢复续费':'取消续费'}</button>`:`<button class="btn sm" type="button" data-sub="${id}" ${need||S.cash<D.price?'disabled':''}>订阅</button>`}</div>`;}).join(''));
+}
+
+/* ================= 借贷 ================= */
+function renderLoan(){
+  const L=S.loan.amt,r=loanRate(L);
+  setHTML($('#loanKv'),`<dt>待还</dt><dd class="${L>0?'fall':''}">${yuan(L)}</dd><dt>当前日利率</dt><dd>${r?(r*100).toFixed(2)+'%':'—'}</dd><dt>下次计息</dt><dd>明天 00:00，约 ${yuan(L*r)}</dd><dt>剩余额度</dt><dd>${yuan(Math.max(0,LOAN_LIMIT-L))}</dd><dt>累计利息（含房贷）</dt><dd>${yuan(S.stats.interest)}</dd>`);
+  setHTML($('#loanTiers'),`<tr><th>待还金额</th><th>日利率</th><th>折合年化（复利）</th></tr>`+[[0,'1 万以下',0.0001],[1,'1 万到 5 万',0.0002],[2,'5 万到 10 万',0.0003],[3,'10 万及以上',0.0004]].map(([i,n,rr])=>`<tr style="${r===rr?'font-weight:700':''}"><td>${n}</td><td>${(rr*100).toFixed(2)}%</td><td>${((Math.pow(1+rr,365)-1)*100).toFixed(1)}%</td></tr>`).join(''));
+  $('#btnRepay').disabled=L<0.005||S.cash<0.01||S.paused;$('#btnBorrow').disabled=L>=LOAN_LIMIT||S.paused;
+  const m=S.mort;setHTML($('#mortBox'),m?`<div class="small" style="line-height:1.9"><b>房贷</b><br>剩余本金 ${yuan(m.principal)} · 日利率 ${(MORT_RATE*100).toFixed(3)}% · 每天还 ${yuan(MORT_DAILY)}${m.arrears>0?`<br><span class="warn">逾期 ${yuan(m.arrears)}，已 ${m.arrDays} 天。逾期满 30 天，房子会被收走拍卖。</span>`:''}</div>`:'');
+}
+function borrowModal(){
+  const left=Math.max(0,LOAN_LIMIT-S.loan.amt);
+  openModal({title:'随心借 · 借款',body:`<p>剩余额度 ${yuan(left)}。借款立即到账，利息每天零点按档位计入待还。</p>`,
+    input:{def:Math.min(1000,left),chips:[[1000,'1 千'],[5000,'5 千'],[10000,'1 万'],[50000,'5 万'],[Math.floor(left),'全部额度']]},
+    preview:v=>{if(!(v>0))return '';const L=S.loan.amt+v,r=loanRate(L);return `借后待还 <b>${yuan(L)}</b>，日利率 <b>${(r*100).toFixed(2)}%</b>，每天利息约 <b>${yuan(L*r)}</b>`;},
+    ok:'借款',onOk:v=>{if(!running())return '暂停中';if(!(v>0))return '请输入金额';if(v>left+0.001)return '超出额度';borrow(v);return null;}});
+}
+function repayModal(){
+  const max=Math.floor(Math.min(S.cash,S.loan.amt)*100)/100;
+  openModal({title:'随心借 · 还款',body:`<p>待还 ${yuan(S.loan.amt)}，现金 ${yuan(S.cash)}。</p>`,input:{def:max,chips:[[Math.floor(max/2),'一半'],[max,'能还多少还多少']]},
+    ok:'还款',onOk:v=>{if(!running())return '暂停中';if(!(v>0))return '请输入金额';if(v>S.cash+0.001)return '现金不够';repay(v);return null;}});
+}
+
+/* ================= 交易终端 ================= */
+function colors(){
+  const cs=getComputedStyle(document.documentElement);const g=n=>cs.getPropertyValue(n).trim();
+  const west=document.documentElement.dataset.colors==='west';
+  return {rise:west?g('--green'):g('--red'),fall:west?g('--red'):g('--green'),grid:g('--term-line'),muted:g('--term-muted'),text:g('--term-text'),panel:g('--term-panel'),warn:g('--warn'),ma1:g('--ma1'),ma2:g('--ma2'),info:g('--info'),mono:'"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace'};
+}
+function candles(pi,tf){const h=S.mkt.hist[pi];const out=[];let cur=null;for(const t of h){const k=Math.floor(t.i/tf);if(!cur||cur.k!==k){cur={k,o:t.o,h:t.h,l:t.l,c:t.c};out.push(cur);}else{if(t.h>cur.h)cur.h=t.h;if(t.l<cur.l)cur.l=t.l;cur.c=t.c;}}return out;}
+function sma(a,n){const o=new Array(a.length).fill(null);let s=0;for(let i=0;i<a.length;i++){s+=a[i].c;if(i>=n)s-=a[i-n].c;if(i>=n-1)o[i]=s/n;}return o;}
+function drawChart(){
+  const wrap=$('#chartWrap'),cv=$('#chart');if(!wrap||curTab!=='fx')return;
+  const Wd=wrap.clientWidth,Ht=wrap.clientHeight;if(!Wd||!Ht)return;
+  const C=CC||(CC=colors());const dpr=Math.min(2,window.devicePixelRatio||1);
+  if(cv.width!==Math.round(Wd*dpr)||cv.height!==Math.round(Ht*dpr)){cv.width=Math.round(Wd*dpr);cv.height=Math.round(Ht*dpr);}
+  const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,Wd,Ht);
+  const pi=S.fx.sel,p=PAIRS[pi],tf=S.fx.tf;const all=candles(pi,tf);
+  const pL=6,pR=74,pT=Wd<520?40:28,pB=22,pw=Wd-pL-pR,ph=Ht-pT-pB,step=Wd<520?6:8,bw=step-3;
+  const n=Math.max(8,Math.floor(pw/step)),s0=Math.max(0,all.length-n),vis=all.slice(s0);
+  const m7=sma(all,7),m25=sma(all,25);let hi=-Infinity,lo=Infinity;
+  for(const c of vis){if(c.h>hi)hi=c.h;if(c.l<lo)lo=c.l;}
+  for(let i=s0;i<all.length;i++)for(const v of [m7[i],m25[i]])if(v!=null){if(v>hi)hi=v;if(v<lo)lo=v;}
+  const bid=mid(pi)-hsp(pi);hi=Math.max(hi,bid);lo=Math.min(lo,bid);const rg=(hi-lo)||hi*0.001;hi+=rg*0.08;lo-=rg*0.08;
+  const Y=v=>pT+(hi-v)/(hi-lo)*ph,X=i=>pL+pw-(vis.length-i-0.5)*step;
+  ctx.font=`11px ${C.mono}`;ctx.textBaseline='middle';ctx.lineWidth=1;ctx.textAlign='left';
+  for(let k=0;k<=5;k++){const v=lo+(hi-lo)*k/5,yy=Math.round(Y(v))+0.5;ctx.strokeStyle=C.grid;ctx.beginPath();ctx.moveTo(pL,yy);ctx.lineTo(pL+pw,yy);ctx.stroke();ctx.fillStyle=C.muted;ctx.fillText(v.toFixed(p.dp),pL+pw+8,yy);}
+  ctx.textAlign='center';let lx=-1e9;
+  vis.forEach((c,i)=>{const t0=c.k*tf;if(mod(t0,96)===0){const x=Math.round(X(i))+0.5;if(tf<96){ctx.strokeStyle=C.grid;ctx.setLineDash([2,4]);ctx.beginPath();ctx.moveTo(x,pT);ctx.lineTo(x,pT+ph);ctx.stroke();ctx.setLineDash([]);}if(x-lx>60&&x>pL+20&&x<pL+pw-20){const d=gdate(t0*FXT);ctx.fillStyle=C.muted;ctx.fillText(`${d.getMonth()+1}/${d.getDate()}`,x,Ht-pB/2);lx=x;}}});
+  vis.forEach((c,i)=>{const x=Math.round(X(i)),col=c.c>=c.o?C.rise:C.fall;ctx.strokeStyle=col;ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(x+0.5,Y(c.h));ctx.lineTo(x+0.5,Y(c.l));ctx.stroke();const y1=Y(Math.max(c.o,c.c)),y2=Y(Math.min(c.o,c.c));ctx.fillRect(x-(bw-1)/2,Math.round(y1),bw,Math.max(1,Math.round(y2-y1)));});
+  const dma=(a,col)=>{ctx.strokeStyle=col;ctx.lineWidth=1.3;ctx.beginPath();let st=false;for(let i=s0;i<all.length;i++){const v=a[i];if(v==null)continue;const x=X(i-s0),y=Y(v);if(!st){ctx.moveTo(x,y);st=true;}else ctx.lineTo(x,y);}ctx.stroke();ctx.lineWidth=1;};
+  dma(m7,C.ma1);dma(m25,C.ma2);
+  const hl=(v,col,label,dash)=>{let yy=Y(v),cl=0;if(yy<pT){yy=pT+8;cl=1;}else if(yy>pT+ph){yy=pT+ph-8;cl=-1;}yy=Math.round(yy)+0.5;ctx.globalAlpha=cl?0.55:1;ctx.setLineDash(dash);ctx.strokeStyle=col;ctx.beginPath();ctx.moveTo(pL,yy);ctx.lineTo(pL+pw,yy);ctx.stroke();ctx.setLineDash([]);const tx=`${label} ${v.toFixed(p.dp)}${cl>0?' ↑':cl<0?' ↓':''}`;ctx.font=`10px ${C.mono}`;const w=ctx.measureText(tx).width;ctx.fillStyle=col;ctx.fillRect(pL+2,yy-8,w+8,16);ctx.fillStyle='#fff';ctx.textAlign='left';ctx.fillText(tx,pL+6,yy);ctx.globalAlpha=1;};
+  for(const q of S.fx.positions){if(q.pi!==pi)continue;hl(q.entry,q.dir>0?C.rise:C.fall,`#${q.id} ${q.dir>0?'多':'空'} ${q.lev}×`,[6,4]);hl(liqPx(q),C.warn,`#${q.id} 强平`,[2,3]);}
+  const last=all[all.length-1],pc=last.c>=last.o?C.rise:C.fall,yb=Math.round(Math.min(pT+ph,Math.max(pT,Y(bid))))+0.5;
+  ctx.setLineDash([4,3]);ctx.strokeStyle=pc;ctx.beginPath();ctx.moveTo(pL,yb);ctx.lineTo(pL+pw,yb);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle=pc;ctx.fillRect(pL+pw+2,yb-9,pR-4,18);ctx.fillStyle='#fff';ctx.font=`700 11px ${C.mono}`;ctx.textAlign='left';ctx.fillText(bid.toFixed(p.dp),pL+pw+7,yb);
+  let hi_i=vis.length-1;
+  if(hover&&hover.x>=pL&&hover.x<=pL+pw&&hover.y>=pT&&hover.y<=pT+ph){const i=Math.round(vis.length-0.5-(pL+pw-hover.x)/step);if(i>=0&&i<vis.length){hi_i=i;const x=Math.round(X(i))+0.5,yh=Math.round(hover.y)+0.5;ctx.strokeStyle=C.muted;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(x,pT);ctx.lineTo(x,pT+ph);ctx.moveTo(pL,yh);ctx.lineTo(pL+pw,yh);ctx.stroke();ctx.setLineDash([]);const v=hi-(hover.y-pT)/ph*(hi-lo);ctx.fillStyle=C.text;ctx.fillRect(pL+pw+2,yh-9,pR-4,18);ctx.fillStyle=C.panel;ctx.font=`11px ${C.mono}`;ctx.fillText(v.toFixed(p.dp),pL+pw+7,yh);}}
+  const hc=vis[hi_i],gi=s0+hi_i,f=v=>v==null?'—':v.toFixed(p.dp),cc=hc.c>=hc.o?'rise':'fall',dd=gdate(hc.k*tf*FXT);
+  $('#ohlc').innerHTML=`<span>${dd.getMonth()+1}/${dd.getDate()} ${p2(dd.getHours())}:${p2(dd.getMinutes())}</span><span>开 ${f(hc.o)}</span><span>高 ${f(hc.h)}</span><span>低 ${f(hc.l)}</span><span class="${cc}">收 ${f(hc.c)}</span><span style="color:var(--ma1)">MA7 ${f(m7[gi])}</span><span style="color:var(--ma2)">MA25 ${f(m25[gi])}</span>`;
+}
+function renderFx(){
+  if(!S.fx)return;const F=S.fx;
+  const used=F.positions.reduce((a,p)=>a+p.m,0),fl=F.positions.reduce((a,p)=>a+posPnl(p),0),eq=fxEquity(),cum=fxCum();
+  const ts=$('#tsum');
+  if(!ts._init){ts._init=1;ts.innerHTML=`<div><small>可用余额</small><b id="tsA"></b></div><div><small>净值</small><b id="tsE"></b></div><div><small>浮动盈亏</small><b id="tsF"></b></div><div><small>已用保证金</small><b id="tsU"></b></div><div><small>累计交易盈亏</small><b id="tsC"></b></div><div class="tbtns"><button class="btn sm primary" type="button" id="btnDep">从现金转入</button><button class="btn sm" type="button" id="btnWd">转回现金</button></div>`;}
+  $('#tsA').textContent=yuan(F.acct);$('#tsE').textContent=yuan(eq);$('#tsF').textContent=yuan(fl,true);$('#tsF').className=cls(fl);$('#tsU').textContent=yuan(used);$('#tsC').textContent=yuan(cum,true);$('#tsC').className=cls(cum);
+  const nt=S.mkt.notices[0];setHTML($('#tnotice'),nt?`<span class="tag gold">喜报</span><span>${esc(nt.text)}</span>`:'');
+  // 行情列表
+  keyed($('#wl'),PAIRS.map((p,i)=>({p,i})),o=>String(o.i),o=>{const b=document.createElement('button');b.className='wrow';b.type='button';b.innerHTML=`<span><b>${o.p.sym}</b><small>${o.p.nick}</small></span><span class="px"><span class="v"></span><small class="c"></small></span>`;b.addEventListener('click',()=>{F.sel=o.i;hover=null;renderFx();});return b;},(el,o)=>{const m=mid(o.i),t=lastTk(o.i),ch=(m-dayOpenPx(o.i))/dayOpenPx(o.i);const v=el.querySelector('.v');v.textContent=(m-hsp(o.i)).toFixed(o.p.dp);v.className='v '+(t.c>=t.o?'rise':'fall');const c=el.querySelector('.c');c.textContent=(ch>=0?'+':'')+(ch*100).toFixed(2)+'%';c.className='c '+cls(ch*1e4);el.classList.toggle('on',o.i===F.sel);});
+  const pi=F.sel,P=PAIRS[pi],md=mid(pi),h=hsp(pi),bid=md-h,ask=md+h,lt=lastTk(pi),ch=(md-dayOpenPx(pi))/dayOpenPx(pi);
+  $('#chSym').textContent=P.sym;$('#chPx').textContent=bid.toFixed(P.dp);$('#chPx').className='num '+(lt.c>=lt.o?'rise':'fall');
+  $('#chChg').textContent=(ch>=0?'+':'')+(ch*100).toFixed(2)+'%';$('#chChg').className='num '+cls(ch*1e4);$('#chMeta').textContent=`${P.nick} · 点差 ${P.spread}`;
+  $$('#tfSeg button').forEach(b=>b.classList.toggle('on',+b.dataset.tf===F.tf));
+  drawChart();
+  // 排名
+  const R=rankInfo(F.rankWin);const wn={day:'今日',week:'本周',all:'开户以来'}[F.rankWin];
+  const rb=$('#rankBox');
+  if(!rb._init){rb._init=1;rb.innerHTML=`<div class="seg" id="rankSeg" style="background:transparent;border-color:var(--term-line)">${['day','week','all'].map(w=>`<button type="button" data-w="${w}" style="color:var(--term-muted)">${({day:'今日',week:'本周',all:'开户以来'})[w]}</button>`).join('')}</div><span id="rankTxt" style="display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center"></span>`;}
+  $$('#rankSeg button').forEach(b=>b.classList.toggle('on',b.dataset.w===F.rankWin));
+  setHTML($('#rankTxt'),`${R&&!R.none?`<span>你的收益 <b class="${cls(R.mine)}">${(R.mine*100>=0?'+':'')+(R.mine*100).toFixed(1)}%</b>，超过了 <b>${R.pct.toFixed(0)}%</b> 的交易者</span><span class="small muted">统计口径：${wn}有交易且账户仍有余额的 ${R.n} 位用户</span>`:`<span class="small muted">${wn}还没有交易记录。</span>`}`);
+  // 下单面板
+  $('#tpBid').textContent=bid.toFixed(P.dp);$('#tpAsk').textContent=ask.toFixed(P.dp);$('#tpSp').textContent=P.spread;
+  $$('.bsb').forEach(b=>b.classList.toggle('on',+b.dataset.dir===F.dir));
+  $('#tpFree').textContent='可用 '+yuan(F.acct);
+  const m=parseFloat($('#inMargin').value)||0,lev=clamp(parseInt($('#inLev').value,10)||1,1,100);
+  $('#levVal').textContent=lev+'×';$$('#levChips button').forEach(b=>b.classList.toggle('on',+b.dataset.l===lev));
+  const N=m*lev,entry=F.dir>0?ask:bid,tol=LIQ/lev,tolP=(entry*tol-2*h)/P.pip,liq=entry*(1-tol*F.dir),spc=N*2*h/md,swp=N*P.swap;
+  const d=tol-P.spread*P.pip/md;const pr=n=>{if(d<=0)return 1;const s=P.vol*1.12*Math.sqrt(n);return Math.min(1,2*normCdf(-d/s));};
+  const pf=x=>x>=0.9995?'≈ 100%':x<0.001?'< 0.1%':'≈ '+(x*100).toFixed(1)+'%';
+  setHTML($('#calc'),`<dt>名义仓位</dt><dd>${yuan(N)}</dd><dt>每点价值</dt><dd>${yuan(N*P.pip/md)}</dd><dt>开仓点差成本</dt><dd>${yuan(spc)}</dd><dt>每日隔夜费</dt><dd>${yuan(swp)}</dd><dt>可承受反向波动</dt><dd>${(tol*100).toFixed(2)}% · ${Math.max(0,Math.round(tolP))} 点</dd><dt>预计强平价</dt><dd>${liq.toFixed(P.dp)}</dd><dt>1 天内触及强平</dt><dd>${pf(pr(96))}</dd><dt>7 天内触及强平</dt><dd>${pf(pr(96*7))}</dd>`);
+  $('#twarn').textContent=m<100?'最低保证金 ¥100':m>F.acct+0.001?'交易账户可用余额不够，可以从现金转入':'';
+  const ob=$('#btnOpen');ob.className='btn '+(F.dir>0?'buy':'sell');ob.textContent=`${F.dir>0?'买入做多':'卖出做空'} ${P.sym}`;ob.disabled=S.paused||m<100||m>F.acct+0.001;
+  // 持仓
+  const tb=$('#posTbl');
+  if(!tb._init){tb._init=1;tb.innerHTML=`<thead><tr><th>品种 / 方向</th><th>杠杆</th><th>保证金</th><th>名义仓位</th><th>开仓价</th><th>现价</th><th>强平价</th><th>隔夜费</th><th>浮动盈亏</th><th></th></tr></thead><tbody></tbody>`;}
+  keyed(tb.tBodies[0],F.positions,q=>String(q.id),q=>{const tr=document.createElement('tr');tr.innerHTML=`<td><b class="num">${PAIRS[q.pi].sym}</b><span class="dirt ${q.dir>0?'long':'short'}">${q.dir>0?'多':'空'}</span><div class="small muted">#${q.id} · ${stamp(q.t)}</div></td><td class="num">${q.lev}×</td><td class="num c-m"></td><td class="num">${yuan(q.N)}</td><td class="num">${fmtPx(q.pi,q.entry)}</td><td class="num c-now"></td><td class="num"><span class="c-liq"></span><div class="small muted c-d"></div></td><td class="num c-sw"></td><td class="num"><b class="c-p"></b><div class="risk"><i class="c-r"></i></div></td><td><button class="btn sm" type="button" data-add="1">追加保证金</button> <button class="btn sm" type="button" data-close="1">平仓</button></td>`;tr.querySelector('[data-add]').addEventListener('click',()=>fxAddMargin(q));tr.querySelector('[data-close]').addEventListener('click',()=>fxClose(q));return tr;},(tr,q)=>{const pn=posPnl(q),r=Math.max(0,-pn)/(LIQ*q.m);tr.querySelector('.c-m').textContent=yuan(q.m);tr.querySelector('.c-now').textContent=fmtPx(q.pi,closePx(q,mid(q.pi)));tr.querySelector('.c-liq').textContent=fmtPx(q.pi,liqPx(q));tr.querySelector('.c-d').textContent=`距 ${Math.max(0,Math.round(distPips(q)))} 点`;const sw=tr.querySelector('.c-sw');sw.textContent=yuan(q.swap,true);sw.className='num c-sw '+cls(q.swap);const pe=tr.querySelector('.c-p');pe.textContent=yuan(pn,true);pe.className='c-p '+cls(pn);const ri=tr.querySelector('.c-r');ri.style.width=Math.min(100,r*100)+'%';ri.className='c-r'+(r>0.7?' hot':'');});
+  $('#posEmpty').hidden=F.positions.length>0;$('#posSum').textContent=F.positions.length?`${F.positions.length} 个，浮动 ${yuan(fl,true)}`:'';
+  // 信号
+  const sc=$('#sigCard');sc.hidden=!S.subs.signal;
+  if(S.subs.signal&&S.mkt.sig){$('#sigAcc').textContent=`历史准确率 ${(S.mkt.sigHits/S.mkt.sigTotal*100).toFixed(1)}%（${S.mkt.sigTotal} 次）`;setHTML($('#sigTbl'),`<tr><th>货币对</th><th>方向</th><th>置信度</th><th>给出时间</th></tr>`+S.mkt.sig.map((s,i)=>`<tr><td class="num">${PAIRS[i].sym}</td><td class="${s.dir>0?'rise':'fall'}">${s.dir>0?'看涨':'看跌'}</td><td class="num">${s.conf}%</td><td class="num">${stamp(s.t)}</td></tr>`).join(''));}
+  setHTML($('#rules'),rulesHTML());
+}
+function fxMoveModal(kind){
+  if(kind==='dep')openModal({title:'从现金转入交易账户',body:`<p>现金 ${yuan(S.cash)}。</p>`,input:{def:Math.min(1000,Math.floor(S.cash)),chips:[[500,'500'],[1000,'1000'],[5000,'5000'],[Math.floor(S.cash),'全部现金']]},ok:'转入',onOk:v=>fxDeposit(v)});
+  else openModal({title:'转回现金',body:`<p>交易账户可用 ${yuan(S.fx.acct)}（持仓占用的保证金不能转出）。</p>`,input:{def:Math.floor(S.fx.acct),chips:[[Math.floor(S.fx.acct),'全部可用']]},ok:'转出',onOk:v=>fxWithdraw(v)});
+}
+
+/* ================= 账本 ================= */
+function renderLedger(){
+  const H=HOUSES[S.house];let b='';
+  if(H.rent)b+=`<div class="li"><div class="grow"><b>房租</b><small>${H.name}，每天零点</small></div><span class="price">${yuan(H.rent)}/天</span></div>`;
+  if(S.mort)b+=`<div class="li"><div class="grow"><b>房贷</b><small>剩余本金 ${yuan(S.mort.principal)}</small></div><span class="price">${yuan(MORT_DAILY)}/天</span></div>`;
+  for(const id in S.subs){const D=SUBS[id],s=S.subs[id];b+=`<div class="li"><div class="grow"><b>${D.name}</b><small>下次 ${stamp(s.next)}${s.cancel?'，已取消续费':''}</small></div><span class="price">${yuan(D.price)}/${D.period===7?'周':'月'}</span><button class="btn sm ghost" type="button" data-unsub="${id}">${s.cancel?'恢复':'取消续费'}</button></div>`;}
+  if(S.loan.amt>0)b+=`<div class="li"><div class="grow"><b>借款利息</b><small>计入待还，不从现金扣</small></div><span class="price">约 ${yuan(S.loan.amt*loanRate(S.loan.amt))}/天</span></div>`;
+  for(const u of S.unpaid)b+=`<div class="li"><div class="grow"><b class="warn">未付：${esc(u.name)}</b><small>${stamp(u.t)}</small></div><span class="price">${yuan(u.amt)}</span><button class="btn sm" type="button" data-payb="${u.id}">付</button></div>`;
+  setHTML($('#bills'),b||'<div class="empty">没有固定支出。</div>');
+  const st=S.stats;
+  setHTML($('#lifeKv'),`<dt>${esc(S.name)}</dt><dd>第 ${S.gen} 代 · 第 ${dayOf(S.t)} 天</dd><dt>工作</dt><dd>${Math.round(st.workMin/60)} 小时 · ${yuan(st.wages)}</dd><dt>生活开销</dt><dd>${yuan(st.spentLife)}</dd><dt>订阅累计</dt><dd>${yuan(st.subsPaid)}</dd><dt>利息累计</dt><dd>${yuan(st.interest)}</dd>${S.fx||st.deposits?`<dt>转入 / 转出交易账户</dt><dd>${yuan(st.deposits)} / ${yuan(st.withdraws)}</dd><dt>交易累计盈亏</dt><dd class="${cls(fxCum())}">${yuan(fxCum(),true)}</dd><dt>开仓 / 强平</dt><dd>${st.trades} / ${st.liqs}</dd>`:''}<dt>卖掉的东西</dt><dd>${st.sold} 件</dd><dt>纪念物</dt><dd>${S.keeps.length} 件</dd>`);
+  setHTML($('#flow'),`<tr><th>时间</th><th>内容</th><th>金额</th></tr>`+S.flow.slice(0,150).map(f=>`<tr><td class="num">${stamp(f.t)}</td><td style="white-space:normal">${esc(f.text)}</td><td class="num ${f.amt?cls(f.amt):''}">${f.amt?yuan(f.amt,true):'—'}</td></tr>`).join(''));
+}
+function payBill(id){
+  if(!running()){toast('暂停中','','warn');return;}
+  const u=S.unpaid.find(x=>x.id===id);if(!u)return;const p=Math.min(S.cash,u.amt);if(p<=0){toast('现金不够','','warn');return;}
+  S.cash-=p;u.amt-=p;flow(`支付${u.name}`,-p,'life');if(u.amt<0.005)S.unpaid=S.unpaid.filter(x=>x!==u);renderAll();
+}
+
+function renderAll(){
+  if(!S)return;
+  CC=colors();
+  renderHeader();renderTabs();renderInbox();
+  if(curTab==='home')renderHome();
+  if(curTab==='food')renderFood();
+  if(curTab==='work')renderWork();
+  if(curTab==='shop')renderShop();
+  if(curTab==='loan')renderLoan();
+  if(curTab==='fx')renderFx();
+  if(curTab==='ledger')renderLedger();
+  if(M&&M.preview)updPrev();
+}
+
+/* ================= 结算与继承 ================= */
+function endLife(reason){
+  if(S.ended)return;S.ended=true;
+  if(S.act&&S.act.kind==='work')endShift(true);S.act=null;
+  sampleDay();
+  if(S.fx)for(const p of S.fx.positions.slice())settlePos(p,closePx(p,mid(p.pi)),'close',0,true);
+  if(S.series.length){const l=S.series[S.series.length-1];l.net=Math.round(S.cash+fxEquity()+(S.house==='own'?HOUSE_PRICE*0.9:0)-debtTotal());}
+  const ser=S.series;const step=Math.max(1,Math.ceil(ser.length/60));
+  META.family.push({gen:S.gen,name:S.name,days:dayOf(S.t),reason,net:ser.length?ser[ser.length-1].net:0,
+    pts:ser.filter((_,i)=>i%step===0||i===ser.length-1).map(x=>({d:x.d,net:x.net,h:x.health})),
+    wages:Math.round(S.stats.wages),dep:Math.round(S.stats.deposits),fx:Math.round(fxCum()),trades:S.stats.trades,liqs:S.stats.liqs,keeps:S.keeps.length});
+  save();
+  showSettlement(reason);
+}
+function lineChart(lines,opt){
+  const W=440,H=130,pl=46,pr=8,pt=10,pb=20;
+  const xs=opt.xs;const n=xs.length;if(n<2)return '<svg viewBox="0 0 440 130"><text x="220" y="65" text-anchor="middle" font-size="12" fill="currentColor" opacity=".6">天数太少，画不出曲线</text></svg>';
+  let lo=opt.min!=null?opt.min:Infinity,hi=opt.max!=null?opt.max:-Infinity;
+  if(opt.min==null||opt.max==null)for(const l of lines)for(const v of l.v){if(opt.min==null&&v<lo)lo=v;if(opt.max==null&&v>hi)hi=v;}
+  if(hi===lo){hi+=1;lo-=1;}
+  const X=i=>pl+(W-pl-pr)*i/(n-1),Y=v=>pt+(hi-v)/(hi-lo)*(H-pt-pb);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img">`;
+  s+=`<line x1="${pl}" y1="${Y(hi)}" x2="${W-pr}" y2="${Y(hi)}" stroke="currentColor" opacity=".12"/><line x1="${pl}" y1="${Y(lo)}" x2="${W-pr}" y2="${Y(lo)}" stroke="currentColor" opacity=".2"/>`;
+  if(lo<0&&hi>0)s+=`<line x1="${pl}" y1="${Y(0)}" x2="${W-pr}" y2="${Y(0)}" stroke="currentColor" opacity=".35" stroke-dasharray="3 3"/>`;
+  const fmt=opt.fmt||(v=>Math.round(v));
+  s+=`<text x="${pl-4}" y="${Y(hi)+4}" text-anchor="end" font-size="10" fill="currentColor" opacity=".6">${fmt(hi)}</text><text x="${pl-4}" y="${Y(lo)}" text-anchor="end" font-size="10" fill="currentColor" opacity=".6">${fmt(lo)}</text>`;
+  s+=`<text x="${pl}" y="${H-4}" font-size="10" fill="currentColor" opacity=".6">第${xs[0]}天</text><text x="${W-pr}" y="${H-4}" text-anchor="end" font-size="10" fill="currentColor" opacity=".6">第${xs[n-1]}天</text>`;
+  for(const m of (opt.marks||[])){const i=xs.findIndex(d=>d>=m);if(i>=0)s+=`<line x1="${X(i)}" y1="${pt}" x2="${X(i)}" y2="${H-pb}" stroke="var(--gold)" opacity=".5" stroke-dasharray="2 3"/>`;}
+  for(const l of lines){s+=`<polyline fill="none" stroke="${l.c}" stroke-width="1.8" points="${l.v.map((v,i)=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ')}"/>`;}
+  return s+'</svg>';
+}
+function mealChart(ser){
+  const W=440,H=130,pl=46,pr=8,pt=10,pb=20,n=ser.length;if(n<1)return '';
+  const col={cook:'#3f9a73',instant:'#c9a227',out:'#4f7cac',deliv:'#d0674a'};
+  const bw=Math.max(1,(W-pl-pr)/n-1);let s=`<svg viewBox="0 0 ${W} ${H}">`;const mx=Math.max(3,...ser.map(x=>x.meals.length));
+  ser.forEach((x,i)=>{let y=H-pb;const cnt={cook:0,instant:0,out:0,deliv:0};for(const m of x.meals)cnt[m]=(cnt[m]||0)+1;for(const k of ['cook','instant','out','deliv']){const hh=cnt[k]/mx*(H-pt-pb);if(hh>0){y-=hh;s+=`<rect x="${(pl+i*(W-pl-pr)/n).toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${hh.toFixed(1)}" fill="${col[k]}"/>`;}}});
+  s+=`<text x="${pl-4}" y="${pt+4}" text-anchor="end" font-size="10" fill="currentColor" opacity=".6">${mx} 顿</text><text x="${pl}" y="${H-4}" font-size="10" fill="currentColor" opacity=".6">第${ser[0].d}天</text><text x="${W-pr}" y="${H-4}" text-anchor="end" font-size="10" fill="currentColor" opacity=".6">第${ser[n-1].d}天</text>`;
+  return s+'</svg>';
+}
+function dwellChart(dw){
+  const names={home:'家',food:'吃饭',work:'工作',shop:'商店',loan:'随心借',fx:'交易',ledger:'账本'};
+  const ks=Object.keys(names).filter(k=>dw[k]);const tot=ks.reduce((a,k)=>a+dw[k],0)||1;const W=440,rowH=15;
+  let s=`<svg viewBox="0 0 ${W} ${Math.max(40,ks.length*rowH+8)}">`;
+  ks.forEach((k,i)=>{const w=(W-150)*dw[k]/tot;s+=`<text x="0" y="${i*rowH+12}" font-size="11" fill="currentColor">${names[k]}</text><rect x="52" y="${i*rowH+3}" width="${Math.max(1,w).toFixed(1)}" height="10" rx="2" fill="${k==='fx'?'var(--info)':'var(--acc)'}"/><text x="${56+w}" y="${i*rowH+12}" font-size="10" fill="currentColor" opacity=".7">${dw[k]<60?Math.round(dw[k])+' 秒':Math.round(dw[k]/60)+' 分钟'}</text>`;});
+  return s+'</svg>';
+}
+function showSettlement(reason){
+  const ser=S.series,xs=ser.map(x=>x.d),st=S.stats;
+  const mk=S.marks.slice().sort((a,b)=>a.t-b.t);
+  const markDays=mk.map(m=>dayOf(m.t));
+  let cw=0,cd=0;const cumW=[],cumD=[];for(const x of ser){cw+=x.wage;cd+=x.dep;cumW.push(cw);cumD.push(cd);}
+  const ratio=st.wages>0?st.deposits/st.wages*100:0;
+  const lastWork=S.lastWorkT!=null?`第 ${dayOf(S.lastWorkT)} 天`:'没有';
+  const foot=[];
+  if(owns('tv')||S.news.length&&META.tvEver)foot.push('电视新闻由一个独立的随机过程生成，没有参与行情。');
+  if(S.fx||st.trades)foot.push('行情每一次涨跌的方向各占一半；点差、隔夜费按规则如实计入。排名中的其他交易者与你看同一套行情、付同一套成本。');
+  if(S.subs.signal||META.signalEver)foot.push(`行情助手的方向由随机过程给出，历史准确率 ${(S.mkt.sigHits/S.mkt.sigTotal*100).toFixed(1)}%（${S.mkt.sigTotal} 次）。`);
+  foot.push('页面停留时长只统计游戏运行期间，不包括暂停时的查看。');
+  const body=`<p>${esc(S.name)} · 第 ${S.gen} 代 · ${reason==='death'?`第 ${dayOf(S.t)} 天，健康归零。`:`第 ${dayOf(S.t)} 天，这一代落幕。`}</p>
+  <dl class="kv" style="padding:0;grid-template-columns:auto 1fr auto 1fr">
+  <dt>工作</dt><dd>${Math.round(st.workMin/60)} 小时 · ${yuan(st.wages)}</dd><dt>最后一次打工</dt><dd>${lastWork}</dd>
+  <dt>生活开销</dt><dd>${yuan(st.spentLife)}</dd><dt>订阅</dt><dd>${yuan(st.subsPaid)}</dd>
+  <dt>利息</dt><dd>${yuan(st.interest)}</dd><dt>转入交易账户</dt><dd>${yuan(st.deposits)}（工资的 ${ratio.toFixed(0)}%）</dd>
+  <dt>交易累计盈亏</dt><dd class="${cls(fxCum())}">${yuan(fxCum(),true)}</dd><dt>开仓 / 强平</dt><dd>${st.trades} / ${st.liqs}</dd>
+  <dt>结束时净资产</dt><dd>${yuan(ser.length?ser[ser.length-1].net:0)}</dd><dt>纪念物</dt><dd>${S.keeps.length} 件</dd></dl>
+  <div class="charts">
+   <div class="chartbox"><h4>健康 <i style="color:var(--acc)">━</i> 心情等级 <i style="color:var(--gold)">━</i></h4>${lineChart([{v:ser.map(x=>x.health),c:'var(--acc)'},{v:ser.map(x=>x.moodLv*25),c:'var(--gold)'}],{xs,min:0,max:100,marks:markDays})}</div>
+   <div class="chartbox"><h4>净资产 <i style="color:var(--acc)">━</i> 欠款 <i style="color:var(--red)">━</i></h4>${lineChart([{v:ser.map(x=>x.net),c:'var(--acc)'},{v:ser.map(x=>x.debt),c:'var(--red)'}],{xs,marks:markDays,fmt:v=>Math.abs(v)>=10000?(v/10000).toFixed(1)+'万':Math.round(v)})}</div>
+   <div class="chartbox"><h4>杠杆（名义仓位 ÷ 交易账户净值，按天末）</h4>${lineChart([{v:ser.map(x=>x.lev),c:'var(--info)'}],{xs,min:0,marks:markDays,fmt:v=>v.toFixed(1)+'×'})}</div>
+   <div class="chartbox"><h4>累计工资 <i style="color:var(--acc)">━</i> 累计转入交易 <i style="color:var(--info)">━</i></h4>${lineChart([{v:cumW,c:'var(--acc)'},{v:cumD,c:'var(--info)'}],{xs,min:0,marks:markDays,fmt:v=>v>=10000?(v/10000).toFixed(1)+'万':Math.round(v)})}</div>
+   <div class="chartbox"><h4>每天吃的饭：自己做 <i style="color:#3f9a73">■</i> 泡面 <i style="color:#c9a227">■</i> 出门吃 <i style="color:#4f7cac">■</i> 外卖 <i style="color:#d0674a">■</i></h4>${mealChart(ser)}</div>
+   <div class="chartbox"><h4>运行期间各页面的停留</h4>${dwellChart(S.dwell)}</div>
+  </div>
+  <h4 style="margin:6px 0 0">记录</h4>
+  <ul class="marks">${mk.map(m=>`<li>第 ${dayOf(m.t)} 天 · ${esc(m.text)}</li>`).join('')||'<li>没有特别的记录。</li>'}</ul>
+  <div class="foot">${foot.map(esc).join('<br>')}</div>`;
+  openModal({title:'结算',wide:true,block:true,body,ok:'看看留下了什么',cancel:false,onOk:()=>{setTimeout(showInheritance,0);return null;}});
+}
+function estate(){
+  const items=Object.keys(S.items).map(id=>({id,name:ITEMS[id].name,val:sellValue(id)}));
+  const subs=Object.keys(S.subs).filter(id=>!S.subs[id].cancel).map(id=>({id,name:SUBS[id].name,price:SUBS[id].price,period:SUBS[id].period}));
+  const houseVal=S.house==='own'?HOUSE_PRICE*0.9:0;
+  const assets=S.cash+(S.fx?S.fx.acct:0)+houseVal+items.reduce((a,b)=>a+b.val,0);
+  const debts=S.loan.amt+(S.mort?S.mort.principal+S.mort.arrears:0)+unpaidTotal();
+  return {cash:S.cash,fxOpen:!!S.fx,fxAcct:S.fx?S.fx.acct:0,house:S.house,houseVal,mort:S.mort?Object.assign({},S.mort):null,loan:S.loan.amt,loanOn:S.loan.on,unpaid:S.unpaid.map(u=>Object.assign({},u)),items,itemsRaw:JSON.parse(JSON.stringify(S.items)),wear:Object.assign({},S.wear),subs,keeps:S.keeps.slice(),assets,debts};
+}
+function showInheritance(){
+  const E=estate();
+  const li=(a,b)=>`<div class="li" style="padding:6px 0"><div class="grow">${a}</div><span class="price">${b}</span></div>`;
+  let body=`<p>下一代可以接受全部遗产，也可以放弃。接受时，资产、负债和仍在续费的服务一起承接，负债不以遗产价值为限；放弃时，这些都不会留下。</p>`;
+  body+=`<h4 style="margin:10px 0 2px">资产</h4>`+li('现金',yuan(E.cash))+(E.fxOpen?li('交易账户（持仓已按市价平掉）',yuan(E.fxAcct)):'')+(E.house==='own'?li('房子（按市价九折估）',yuan(E.houseVal)):li('住处',HOUSES[E.house].name+'（租的，继续租）'))+E.items.map(i=>li(esc(i.name)+'（二手价）',yuan(i.val))).join('');
+  body+=`<h4 style="margin:10px 0 2px">负债</h4>`+(E.loan>0?li('随心借待还',yuan(E.loan)):'')+(E.mort?li('房贷本金与逾期',yuan(E.mort.principal+E.mort.arrears)):'')+E.unpaid.map(u=>li('未付：'+esc(u.name),yuan(u.amt))).join('')+(E.debts<0.005?li('没有负债',''):'');
+  if(E.subs.length)body+=`<h4 style="margin:10px 0 2px">仍在续费的服务</h4>`+E.subs.map(s=>li(s.name,`${yuan(s.price)}/${s.period===7?'周':'月'}`)).join('');
+  const rights=[];if(E.fxOpen)rights.push('交易账户');if(E.loanOn)rights.push('随心借额度');if(E.items.some(i=>i.id==='ebike'))rights.push('电动车（外卖骑手的活）');if(E.items.some(i=>i.id==='suit'))rights.push('正装（文员工作需要）');if(E.items.some(i=>i.id==='tv'))rights.push('电视');
+  if(rights.length)body+=`<h4 style="margin:10px 0 2px">随遗产一起的</h4><p class="small">${rights.join('、')}</p>`;
+  if(E.keeps.length)body+=`<h4 style="margin:10px 0 2px">纪念物</h4><p class="small">${E.keeps.map(k=>esc(k.name)).join('、')}</p>`;
+  body+=`<div class="foot">资产合计 ${yuan(E.assets)} · 负债合计 ${yuan(E.debts)} · 相抵 <b class="${cls(E.assets-E.debts)}">${yuan(E.assets-E.debts,true)}</b></div>`;
+  openModal({title:'留下来的东西',wide:true,block:true,body,ok:'接受全部',cancel:false,extra:`<button class="btn" type="button" id="mRenounce">放弃继承</button>`,
+    onOpen:b=>{b.querySelector('#mRenounce').addEventListener('click',()=>{closeModal();nextGen(null);});},
+    onOk:()=>{setTimeout(()=>nextGen(E),0);return null;}});
+}
+function applyInheritance(E){
+  S.cash+=E.cash;S.house=E.house;S.mort=E.mort;S.loan={on:E.loanOn||E.loan>0,amt:E.loan};S.loanInviteSent=S.loan.on;
+  S.unpaid=E.unpaid.map(u=>Object.assign(u,{t:S.t}));
+  S.items={};for(const id in E.itemsRaw){S.items[id]={t:S.t,broken:E.itemsRaw[id].broken};}
+  S.wear=E.wear;for(const s of E.subs)S.subs[s.id]={next:S.t+s.period*DAY,cancel:false,since:S.t};
+  S.keeps=E.keeps.slice();
+  if(E.fxOpen){S.fx={acct:E.fxAcct,positions:[],sel:0,tf:4,dir:1,cum:0,log:[],nextId:1,seen:null,win:{day:{cum:0,cap:E.fxAcct,dep:0,tr:false},week:{cum:0,cap:E.fxAcct,dep:0,tr:false},all:{cum:0,cap:E.fxAcct,dep:0,tr:false}},rankWin:'week'};}
+  if(owns('tv'))META.tvEver=true;
+}
+function tipText(){
+  const gen=['暂停时可以查看所有页面，行动要在继续之后进行。','健康往哪个方向走，取决于饮食、精力、活动、清洁里最短的那一根。','订阅会自动续费，可以在商店或账本里取消。','心情很低的时候能做的事会变少；心死的时候什么都不做，也会慢慢缓过来。','自己做饭最省钱，手艺会越做越好。','电视里的天气预报说的是明天的天气。','精力见底会直接睡着，手上的事也就停了。','同一件事一天里重复做，心情的加成会越来越少。','上班时离开工作页面，工作不会停，但需要处理的事会错过。'];
+  const gated=[];
+  if(META.tvEver&&META.tradesEver>=10)gated.push('新闻和汇率由两个互不相关的过程生成。');
+  if(META.signalEver)gated.push('行情助手给出的方向由随机过程产生；页面上的历史准确率是真实统计。');
+  if(META.liqEver)gated.push('某一仓位的浮动亏损达到保证金的 80% 时会被强平；行情跳动剧烈时，成交价可能更差。');
+  return gated.length&&Math.random()<0.35?pick(gated):pick(gen);
+}
+function nextGen(E){
+  const ld=$('#loading');$('#loadT').textContent=`第 ${META.gen+1} 代`;$('#loadTip').textContent=tipText();ld.hidden=false;
+  setTimeout(()=>{
+    newLife(E);curTab='home';$$('.view').forEach(v=>v.classList.toggle('on',v.dataset.view==='home'));
+    ld.hidden=true;save();renderAll();
+    toast(E?'接受了遗产':'放弃了继承',E?'资产、负债和续费服务都已承接。':'从头开始。','');
+  },3200);
+}
+function showFamily(){
+  const f=META.family;
+  const body=f.length?`<div class="fam" style="padding:0">${f.map(g=>{const xs=g.pts.map(p=>p.d);return `<div class="gcard"><b>第 ${g.gen} 代 · ${esc(g.name)}</b><div class="small muted">${g.days} 天 · ${g.reason==='death'?'健康归零':'落幕'} · 净资产 ${yuan(g.net)}</div>${lineChart([{v:g.pts.map(p=>p.net),c:'var(--acc)'}],{xs,fmt:v=>Math.abs(v)>=10000?(v/10000).toFixed(1)+'万':Math.round(v)})}<div class="small muted">工资 ${yuan(g.wages)} · 转入交易 ${yuan(g.dep)} · 交易 ${yuan(g.fx,true)} · 开仓 ${g.trades} · 强平 ${g.liqs}</div></div>`;}).join('')}</div>`:'<p>这是第一代。</p>';
+  openModal({title:'族谱',wide:true,body,ok:'关闭',cancel:false,extra:`<button class="btn ghost" type="button" id="mWipe">清除存档，从头开始</button>`,
+    onOpen:b=>{const w=b.querySelector('#mWipe');w.addEventListener('click',()=>{if(!w.dataset.armed){w.dataset.armed='1';w.textContent='再点一次，确认清除全部存档';return;}try{localStorage.removeItem(SAVE_KEY);}catch(e){}location.reload();});}});
+}
+
+/* ================= 主循环 ================= */
+function advance(dm){
+  const t0=S.t;S.t+=dm;
+  const h0=Math.floor(t0/60),h1=Math.floor(S.t/60);
+  for(let h=h0+1;h<=h1;h++){if(h%24===0)daily();hourly();}
+  bodyStep(dm);actStep(dm);fluStep(dm);inboxStep();fxInviteStep();marketStep();newsStep();
+  if(S.health<=0&&!S.ended)endLife('death');
+}
+const SAVE_KEY='manman-fuqilai-v1';
+function save(){
+  try{
+    const mk=S.mkt;const hist=mk.hist.map(h=>h.slice(-1200).map(t=>[t.i,+t.o.toPrecision(7),+t.h.toPrecision(7),+t.l.toPrecision(7),+t.c.toPrecision(7),t.k]));
+    const obj={S:Object.assign({},S,{mkt:Object.assign({},mk,{hist})}),META};
+    localStorage.setItem(SAVE_KEY,JSON.stringify(obj));
+  }catch(e){}
+}
+function load(){
+  try{
+    const raw=localStorage.getItem(SAVE_KEY);if(!raw)return false;
+    const o=JSON.parse(raw);if(!o||!o.S||o.S.v!==1||!o.META)return false;
+    META=o.META;S=o.S;S.mkt.hist=S.mkt.hist.map(h=>h.map(a=>({i:a[0],o:a[1],h:a[2],l:a[3],c:a[4],k:a[5]})));
+    S.paused=true;return true;
+  }catch(e){return false;}
+}
+let saveAcc=0;
+function loop(){
+  if(!S)return;
+  if(running()&&!S.ended){advance(MIN_PER_STEP*S.speed);S.dwell[curTab]=(S.dwell[curTab]||0)+STEP_MS/1000;}
+  renderAll();
+  saveAcc+=STEP_MS;if(saveAcc>=15000){saveAcc=0;if(!S.ended)save();}
+}
+
+/* ================= 事件绑定 ================= */
+function bind(){
+  $('#tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b)setTab(b.dataset.tab);});
+  $('#btnPause').addEventListener('click',()=>{S.paused=!S.paused;renderAll();});
+  $('#speedSeg').addEventListener('click',e=>{const b=e.target.closest('[data-s]');if(b){S.speed=+b.dataset.s;renderAll();}});
+  $('#btnInbox').addEventListener('click',()=>{const box=$('#inbox');box.hidden=!box.hidden;if(!box.hidden){for(const m of S.inbox)m.seen=true;box._h=null;}renderAll();});
+  $('#inbox').addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(b)resolveMsg(+b.dataset.m,b.dataset.c);});
+  $('#actCancel').addEventListener('click',()=>{if(!running()){toast('暂停中','','warn');return;}stopAct();});
+  document.addEventListener('click',e=>{
+    const t=e.target.closest('button');if(!t||t.disabled)return;const d=t.dataset;
+    if(d.act)startAct(d.act);
+    else if(d.food)eat(d.food);
+    else if(d.job)startShift(d.job);
+    else if(d.gofx)setTab('fx');
+    else if(d.move)moveTo(d.move);
+    else if(d.buy)buy(d.buy);
+    else if(d.sell)sell(d.sell);
+    else if(d.sellk)sellKeep(+d.sellk);
+    else if(d.repair)repair(d.repair);
+    else if(d.sub)subscribe(d.sub);
+    else if(d.unsub)toggleCancel(d.unsub);
+    else if(d.wear!==undefined&&t.classList.contains('wear'))wear(d.wear||null);
+    else if(d.payb)payBill(+d.payb);
+    else if(d.w&&S.fx){S.fx.rankWin=d.w;renderAll();}
+    else if(t.id==='btnGoal'){if(S.paused){toast('暂停中','','warn');return;}S.goal={name:'买房首付',amount:HOUSE_PRICE*DOWN_RATE};diary('想攒钱买一套自己的房子。');loanInvite();goalGapCheck();renderAll();}
+    else if(t.id==='btnBuyHouse')buyHouse();
+    else if(t.id==='btnDropGoal'){S.goal=null;renderAll();}
+    else if(t.id==='btnBorrow')borrowModal();
+    else if(t.id==='btnRepay')repayModal();
+    else if(t.id==='btnDep')fxMoveModal('dep');
+    else if(t.id==='btnWd')fxMoveModal('wd');
+    else if(t.id==='btnFamily')showFamily();
+    else if(t.id==='btnEnd')openModal({title:'让这一代落幕？',body:'<p>这一代的生活会在这里结束，进入结算。</p>',ok:'落幕',onOk:()=>{setTimeout(()=>endLife('end'),0);return null;}});
+  });
+  $('#tfSeg').addEventListener('click',e=>{const b=e.target.closest('[data-tf]');if(b&&S.fx){S.fx.tf=+b.dataset.tf;hover=null;renderAll();}});
+  $$('.bsb').forEach(b=>b.addEventListener('click',()=>{if(S.fx){S.fx.dir=+b.dataset.dir;renderAll();}}));
+  $('#inMargin').addEventListener('input',()=>renderAll());$('#inLev').addEventListener('input',()=>renderAll());
+  $('#mgChips').addEventListener('click',e=>{const b=e.target.closest('[data-f]');if(b&&S.fx){$('#inMargin').value=Math.floor(S.fx.acct*(+b.dataset.f));renderAll();}});
+  $('#levChips').addEventListener('click',e=>{const b=e.target.closest('[data-l]');if(b){$('#inLev').value=b.dataset.l;renderAll();}});
+  $('#btnOpen').addEventListener('click',fxOpen);
+  const cv=$('#chart');
+  cv.addEventListener('pointermove',e=>{const r=cv.getBoundingClientRect();hover={x:e.clientX-r.left,y:e.clientY-r.top};drawChart();});
+  cv.addEventListener('pointerleave',()=>{hover=null;drawChart();});
+  if(window.ResizeObserver)new ResizeObserver(()=>drawChart()).observe($('#chartWrap'));
+  try{window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{CC=null;renderAll();});}catch(e){}
+  new MutationObserver(()=>{CC=null;renderAll();}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden&&S&&!S.ended)save();});
+  window.addEventListener('resize',()=>document.documentElement.style.setProperty('--hdr-h',$('#top').offsetHeight+'px'));
+}
+
+/* ================= 启动 ================= */
+function init(){
+  bind();
+  const loaded=load();
+  if(!loaded){META=blankMeta();newLife(null);}
+  curTab='home';$$('.view').forEach(v=>v.classList.toggle('on',v.dataset.view==='home'));
+  renderAll();
+  if(!loaded){
+    openModal({title:'慢慢富起来？',block:true,cancel:false,ok:'开始',
+      body:`<p>这是${esc(S.name)}。刚来这座城市，住在群租房的一个床位上，身上有 800 块。</p><p>时间一直在走。右上角可以暂停和调速度；暂停时可以查看所有页面，行动要在继续之后进行。</p>`});
+  }else toast('读取了存档','现在是暂停状态，点「继续」接着过日子。','');
+  setInterval(loop,STEP_MS);
+}
+init();
+})();
+</script></body></html>
