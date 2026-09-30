@@ -1,6 +1,8 @@
 // 泡面：一桶面放在小桌上，一步步做。泡面自己是主角，不认具体是哪个容器的热水。
 // 桌上这桶面的状态在 state.things 的「noodle.*」里：
-//   stage 0 桌上没有面；1 封着；2 撕开了；3 料包和叉子拿出来了；4 冲了热水；5 盖上盖子泡着；6 揭开了。
+//   stage 0 桌上没有面；1 封着；2 撕开了；3 料包和叉子拿出来了；4 冲了热水、敞着；5 盖上盖子泡着。
+//   揭开盖子就回到 4：敞着的面随时能吃，也能再盖回去。状态机见 docs/SKETCHES.md。
+//   只能冲够烫的水（data/water 的 hotTemp），冷水倒不进来；冲进来的水倒不出去（料包会被一起倒掉）。
 // 料包放没放（sauce、salt、veg），水里生水的比例（raw），开吃的时刻（ate），还有两个值：
 //   水值（soak）：冲上水之后每分钟涨，盖不盖都一样；超过十分钟面就坨了。
 //   热值（heat）：只有盖着盖子时每分钟涨，热气闷在里面面才熟；盖着够三分钟才算泡熟。
@@ -74,11 +76,23 @@ export const NOODLE_ACTIONS: readonly ActionDef[] = [
     line: '从箱子里拿出一桶面，放在桌上。',
   },
   {
+    // 拿错了、还没拆：原样放回箱子。拆开了就放不回去了。
+    id: 'noodle-putback',
+    object: 'table',
+    label: '放回箱子',
+    temper: 'impulse',
+    requires: at(1),
+    onStart: { items: { noodles: 1 }, set: { 'noodle.stage': 0 } },
+    line: '把面放回箱子里。',
+  },
+  {
     id: 'noodle-tear',
     object: 'table',
     label: '撕开包装',
     temper: 'impulse',
     requires: at(1),
+    // 小桌上的事都要先有一桶面放在桌上。
+    why: (s) => (stage(s) === 0 ? '桌上没有面。' : ''),
     onStart: { set: { 'noodle.stage': 2 }, flags: ['tried:soak'] },
   },
   {
@@ -119,7 +133,7 @@ export const NOODLE_ACTIONS: readonly ActionDef[] = [
     object: 'table',
     label: '盖上盖子，用叉子压住',
     temper: 'impulse',
-    requires: (s) => at(4, 6)(s) && !n(s, 'ate'),
+    requires: (s) => at(4)(s) && !n(s, 'ate'),
     onStart: { set: { 'noodle.stage': 5 } },
   },
   {
@@ -128,16 +142,17 @@ export const NOODLE_ACTIONS: readonly ActionDef[] = [
     label: '揭开盖子',
     temper: 'impulse',
     requires: at(5),
-    onStart: { set: { 'noodle.stage': 6 } },
+    onStart: { set: { 'noodle.stage': 4 } },
     line: (s) => ['面还硬着。', '泡好了。', '面泡坨了。'][quality(s)],
   },
   {
-    // 开吃那一刻定下这碗面：熟没熟、坨没坨、料包放全没有、汤里有没有生水。吃到一半走开，回来接着吃。
+    // 敞着就能吃，不管盖没盖过。开吃那一刻定下这碗面：熟没熟、坨没坨、料包放全没有、汤里有没有生水。
+    // 吃到一半走开，回来接着吃。
     id: 'noodle-eat',
     object: 'table',
     label: '吃面',
     temper: 'impulse',
-    requires: (s) => stage(s) === 6 && s.ongoing?.actionId !== 'noodle-eat',
+    requires: (s) => stage(s) === 4 && s.ongoing?.actionId !== 'noodle-eat',
     minutes: NOODLES.eatMin,
     onStart: (s) =>
       n(s, 'ate') ? {} : { set: { 'noodle.ate': s.t }, accum: doneRight(s) ? { 'skill:soak': 1 } : undefined },

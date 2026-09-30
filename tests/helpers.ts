@@ -2,7 +2,7 @@
 // 保证脚本玩家只有一份，调游戏数值时不会两边漂移。
 import type { ActionDef } from '../src/core/rules';
 import type { GameState } from '../src/core/state';
-import { blockedReason, keepsCurrent, objectAvailable } from '../src/core/rules';
+import { blockedReason, keepsCurrent, objectAvailable, stopOngoing } from '../src/core/rules';
 import { perform, stepWorld } from '../src/core/world';
 import { hourOf } from '../src/core/time';
 import { CONTENT } from '../src/data';
@@ -36,14 +36,16 @@ export function carefulPlayer(s: GameState, opts: CareOptions = {}): void {
   const { sleepFrom = 22, goOut = true } = opts;
   if (goOut && objectAvailable(s, CONTENT.actions, 'door')) return void tryDo(s, act('go-out'));
   for (const a of CONTENT.actions) if (a.object === 'phone') tryDo(s, a);
-  if (s.ongoing && s.ongoing.actionId !== 'lie') return;
   const h = hourOf(s.t);
+  // 醒了还躺在床上：不到睡觉的点就起来。
+  if (lyingDown(s) && !bedtime(h, sleepFrom)) stopOngoing(s);
+  if (s.ongoing && s.ongoing.actionId !== 'lie') return;
   const hungry = s.bars.stamina < 50;
   const thirsty = s.bars.water < 50;
   const st = stage(s);
-  if (st === 6) tryDo(s, act('noodle-eat'));
+  if (st === 4 && heat(s) >= NOODLES.readyMin) tryDo(s, act('noodle-eat'));
   if (st === 5 && heat(s) >= 4) tryDo(s, act('noodle-open'));
-  if (st === 4) tryDo(s, act('noodle-cover'));
+  if (st === 4 && heat(s) < NOODLES.readyMin) tryDo(s, act('noodle-cover'));
   if (st === 3 || st === 4) for (const p of ['sauce', 'salt', 'veg']) tryDo(s, act(`noodle-${p}`));
   const src = hotSource(s, NOODLES.water);
   if (st === 3 && src && w(s, src.id, 'raw') === 0) tryDo(s, act('noodle-pour'));

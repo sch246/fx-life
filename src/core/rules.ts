@@ -3,7 +3,7 @@
 // 具体的行动是 data/ 里数据表的一行；这里只有解释这些行的代码。
 // 不要在这里为某个行动或某一代写特判，缺什么能力就扩展语法本身。
 
-import type { GameState } from './state';
+import type { GameState, Ongoing } from './state';
 import { say } from './feed';
 
 /** 一组量的变化。 */
@@ -42,6 +42,11 @@ export interface ActionDef {
   temper: Temper;
   /** 做这件事的前提。不满足时不可用。 */
   requires?: Predicate;
+  /**
+   * 前提不满足时，点它的人会听到的原因：小人说一句此刻看得见的事（「饮水机里没水。」）。
+   * 按当下的状态算；算出空字符串就是这件事说不出原因，看下一件。
+   */
+  why?: string | ((s: GameState) => string);
   /** 开始时一次性生效。 */
   onStart?: EffectLike;
   /** 持续期间每游戏小时的变化，按分钟摊开结算。 */
@@ -72,6 +77,8 @@ export interface ActionDef {
    * 可以随时间变：since 是这件事开始后过了多少分钟（例如躺下一会儿才睡着）。
    */
   occupies?: boolean | ((s: GameState, since: number) => boolean);
+  /** 被这件事占住身体时（睡着），点别的东西，小人的反应（「Zzz……」）。 */
+  busyWhy?: string;
   /**
    * 只用手、原地就能做（例如看手机回消息）：不起身，不打断正在做的事。
    * 这样的动作必须是一下就做完的（没有耗时）；身体被占住时照样做不了。
@@ -79,6 +86,11 @@ export interface ActionDef {
   hands?: boolean;
   /** 自动：小人自己把这件事做完，玩家不用盯着。手动做熟之后出现在技能栏里，不在物件的菜单里。 */
   auto?: boolean;
+  /**
+   * 在另一件事上面做（睡觉是躺着时闭上眼睛）：这件事结束或被叫停（stopLabel，例如「睁眼」），
+   * 回到下面那件事（还躺着）；叫停下面那件事（「起来」）就一起停下。
+   */
+  on?: string;
   /**
    * 在后台进行：开个头（例如接水、打开开关）就不用守着，小人可以去做别的事，别的事也不会把它打断；
    * stopWhen 成立时小人顺手收尾（onEnd，例如关掉开关）。身体被占住（睡着）时收不了尾，要等醒来。
@@ -89,9 +101,13 @@ export interface ActionDef {
 
 export const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
-/** 把一组变化按比例 k 作用到状态上。钱的变化一律记账。 */
+/**
+ * 把一组变化按比例 k 作用到状态上。钱的变化一律记账。
+ * 条在这里不收回 0–100：同一分钟里几处变化（精力的自然消耗和躺着的回补）先加总，
+ * 世界推进完这一分钟、看过有没有见底或满了（升降级）之后，再由 clampBars 收回。
+ */
 export function applyEffect(s: GameState, e: Effect, k = 1, reason = '', cat = 'life'): void {
-  if (e.bars) for (const [id, dv] of Object.entries(e.bars)) s.bars[id] = clamp((s.bars[id] ?? 0) + dv * k, 0, 100);
+  if (e.bars) for (const [id, dv] of Object.entries(e.bars)) s.bars[id] = (s.bars[id] ?? 0) + dv * k;
   if (e.accum) for (const [id, dv] of Object.entries(e.accum)) s.accum[id] = (s.accum[id] ?? 0) + dv * k;
   if (e.items) for (const [id, dv] of Object.entries(e.items)) s.items[id] = Math.max(0, (s.items[id] ?? 0) + dv * k);
   if (e.flags) for (const f of e.flags) s.flags[f] = true;
@@ -104,8 +120,16 @@ export function applyEffect(s: GameState, e: Effect, k = 1, reason = '', cat = '
   }
 }
 
+/** 把各根条收回 0–100。 */
+export function clampBars(s: GameState): void {
+  for (const id of Object.keys(s.bars)) s.bars[id] = clamp(s.bars[id], 0, 100);
+}
+
 /** 心情等级。需要自律的行动在心情最低时被挡住。 */
-export const moodLv = (s: GameState) => s.levels.mood ?? 0;
+/** 底子的格数取整就是等级（state.levels 带小数，见 core/world 的 LevelDef）。 */
+export const level = (base: number) => Math.floor(base + 1e-9);
+export const lv = (s: GameState, id: string) => level(s.levels[id] ?? 0);
+export const moodLv = (s: GameState) => lv(s, 'mood');
 
 /** 为什么现在不能做这件事；能做时返回 null。 */
 export function blockedReason(s: GameState, a: ActionDef, lowMoodLv = 0): string | null {
@@ -113,6 +137,30 @@ export function blockedReason(s: GameState, a: ActionDef, lowMoodLv = 0): string
   if (a.background && s.tasks.some((t) => t.actionId === a.id)) return 'running';
   if (moodLv(s) <= lowMoodLv && a.temper === 'discipline') return 'mood';
   if (a.requires && !a.requires(s)) return 'requires';
+  return null;
+}
+
+/**
+ * 为什么做不了，给人看的一句话（小人说出来）：按 blockedReason 的先后，在这几件事里找第一件说得出原因的。
+ * 身体被占住时是占住它的那件事的反应；心情太低做不了需要自律的事，用 mood 生成一句（数据表里写）；
+ * 前提不满足时是这件事自己的 why。都说不出就返回 null，不编原因。
+ */
+export function whyNot(
+  s: GameState,
+  actions: readonly ActionDef[],
+  candidates: readonly ActionDef[],
+  mood: (a: ActionDef) => string,
+): string | null {
+  const cur = s.ongoing && actions.find((a) => a.id === s.ongoing!.actionId);
+  for (const a of candidates) {
+    const r = blockedReason(s, a);
+    if (r === 'busy') return (cur && cur.busyWhy) || null;
+    if (r === 'mood') return mood(a);
+    if (r === 'requires' && a.why) {
+      const t = text(s, a.why);
+      if (t) return t;
+    }
+  }
   return null;
 }
 
@@ -168,9 +216,13 @@ export function startAction(s: GameState, a: ActionDef): void {
   }
 }
 
+/** 这件事结束后身体回到哪里：在别的事上面做的，回到那件事；否则空下来。 */
+const after = (s: GameState, a: ActionDef): Ongoing | null => (a.on ? { actionId: a.on, start: s.t } : null);
+
 function finish(s: GameState, a: ActionDef, foreground = true): void {
-  if (foreground) s.ongoing = null;
+  // 先按结束前的状态定下这句话（例如睡着了没有），再结束。
   const line = text(s, a.endLine);
+  if (foreground) s.ongoing = after(s, a);
   const end = resolve(s, a.onEnd);
   if (end) applyEffect(s, end, 1, a.reason ?? a.label, a.cat);
   if (line) say(s, line);
@@ -191,9 +243,15 @@ export function stepOngoing(s: GameState, actions: readonly ActionDef[]): void {
   if ((o.until !== undefined && s.t >= o.until) || (a.stopWhen && a.stopWhen(s))) finish(s, a);
 }
 
-/** 手动停止或被打断：持续期间已发生的变化保留，onEnd 不给。 */
+/** 手动停止或被打断：持续期间已发生的变化保留，onEnd 不给。连同它下面那件事一起停下（起身）。 */
 export function stopOngoing(s: GameState): void {
   s.ongoing = null;
+}
+
+/** 只停下正在做的这一件（睁眼）：回到它下面那件事（还躺着）。 */
+export function endOngoing(s: GameState, actions: readonly ActionDef[]): void {
+  const a = s.ongoing && actions.find((x) => x.id === s.ongoing!.actionId);
+  s.ongoing = a ? after(s, a) : null;
 }
 
 /** 推进后台的事一分钟：条件成立、身体又空着，就顺手收尾。 */
@@ -257,8 +315,11 @@ export function objectMenu(
   const out: MenuEntry[] = [];
   const cur = s.ongoing && actions.find((a) => a.id === s.ongoing!.actionId);
   if (cur && cur.object === objectId && cur.stopLabel) out.push({ kind: 'stop', action: cur });
+  // 在别的事上面做的（睡觉在躺着上面）：下面那件事的「停下」也列出来（睁眼之外还能直接起来）。
+  const base = cur?.on ? actions.find((a) => a.id === cur.on) : undefined;
+  if (base && base.object === objectId && base.stopLabel) out.push({ kind: 'stop', action: base });
   for (const a of actions) {
-    if (a.object !== objectId || a.auto || !visible(a.id) || (cur && cur.id === a.id)) continue;
+    if (a.object !== objectId || a.auto || !visible(a.id) || (cur && (cur.id === a.id || cur.on === a.id))) continue;
     if (blockedReason(s, a) === null) out.push({ kind: 'start', action: a });
   }
   return out;
@@ -267,11 +328,23 @@ export function objectMenu(
 /**
  * 行动会影响哪些条、往哪个方向：预览用，隐藏的条也列出。
  * 按当下的状态算（例如饮水机里的水没烧开过，喝下去体能会降），行动前就能看到确定的代价。
+ * 返回值的正负是方向，大小是快慢的档（1 起，箭头的个数）：持续的事按每小时的变化乘上此刻的倍率
+ * （例如睡眠质量，开着灯睡就少一档），一次性的按变化量；档位线由数据表给。
  */
-export function barPreview(s: GameState, a: ActionDef): Record<string, 1 | -1> {
-  const out: Record<string, 1 | -1> = {};
-  for (const e of [a.onStart, a.perHour, a.onEnd]) {
-    for (const [id, dv] of Object.entries(resolve(s, e)?.bars ?? {})) if (dv) out[id] = dv > 0 ? 1 : -1;
-  }
+export interface PreviewSteps {
+  perHour: readonly number[];
+  once: readonly number[];
+}
+
+export function barPreview(s: GameState, a: ActionDef, steps: PreviewSteps = { perHour: [], once: [] }): Record<string, number> {
+  const out: Record<string, number> = {};
+  const put = (id: string, dv: number, lines: readonly number[]) => {
+    if (!dv) return;
+    const n = 1 + lines.filter((x) => Math.abs(dv) >= x).length;
+    if (n > Math.abs(out[id] ?? 0)) out[id] = Math.sign(dv) * n;
+  };
+  for (const e of [a.onStart, a.onEnd]) for (const [id, dv] of Object.entries(resolve(s, e)?.bars ?? {})) put(id, dv, steps.once);
+  const rate = a.rate ? a.rate(s) : 1;
+  for (const [id, dv] of Object.entries(a.perHour?.bars ?? {})) put(id, dv * rate, steps.perHour);
   return out;
 }

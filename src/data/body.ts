@@ -9,11 +9,12 @@
 // 想让某根条更早出现，不要手改阈值，而是在这里给它加一条能被玩家感知的后果。
 // 数值是第一版初值，按试玩调。
 
-import type { Predicate } from '../core/rules';
+import { lv, type Predicate } from '../core/rules';
 import type { GameState } from '../core/state';
 
 const bar = (s: GameState, id: string) => s.bars[id] ?? 0;
-const lv = (s: GameState, id: string) => s.levels[id] ?? 0;
+/** 底子还剩多少格（带小数）。 */
+const base = (s: GameState, id: string) => s.levels[id] ?? 0;
 
 /** 阈值：一个概念只在这里定义一次。 */
 export const BODY = {
@@ -29,6 +30,11 @@ export const BODY = {
   fitnessEdge: { low: 25, high: 85 },
   /** 浮现迟滞：回到这条线以上并稳定一段时间才淡出，避免在边界抖动。 */
   calm: 65,
+  /**
+   * 精力的底子是攒着的觉，格数满了就是睡足。精力见底时从底子里抽一格、条回到「累了」线下硬撑；
+   * 睡觉把条补满后接着睡，多出来的攒回底子。见 data/bars 的 energy.levels。
+   */
+  rested: 3,
 } as const;
 
 /** 条件成立时叠加的每小时变化。note 给调试面板和文档看，不进入游戏。 */
@@ -41,13 +47,15 @@ export interface EffectRule {
   note: string;
 }
 
+/** 睡着了（身体被睡觉占住）；醒着包括躺着没睡着。 */
+const asleep = (s: GameState) => !!s.ongoing?.occupies;
 const fed = (s: GameState) =>
   bar(s, 'stamina') >= BODY.nourished && bar(s, 'energy') >= BODY.nourished && bar(s, 'water') >= BODY.nourished;
 
 export const EFFECTS: readonly EffectRule[] = [
-  // 精力：体能决定掉得多快、回得多快。
-  { id: 'energy.fitness-low', bar: 'energy', when: (s) => lv(s, 'fitness') <= 1, perHour: -1, note: '体能差，精力掉得更快' },
-  { id: 'energy.fitness-bottom', bar: 'energy', when: (s) => lv(s, 'fitness') === 0, perHour: -1.5, note: '体能见底，精力掉得更快' },
+  // 精力：体能决定醒着时掉得多快、回得多快。睡着时不叠加，这样身体再差，睡一觉也总能往回补。
+  { id: 'energy.fitness-low', bar: 'energy', when: (s) => !asleep(s) && lv(s, 'fitness') <= 1, perHour: -1, note: '体能差，醒着时精力掉得更快' },
+  { id: 'energy.fitness-bottom', bar: 'energy', when: (s) => !asleep(s) && lv(s, 'fitness') === 0, perHour: -1.5, note: '体能见底，醒着时精力掉得更快' },
   { id: 'energy.fitness-high', bar: 'energy', when: (s) => lv(s, 'fitness') >= 3, perHour: 0.8, note: '体能好，精力回得快一点' },
 
   // 心情：心死时也会慢慢缓过来；身体照顾好回得更快，饿着累着缺水会往下掉。
@@ -59,7 +67,8 @@ export const EFFECTS: readonly EffectRule[] = [
 
   // 体能（慢变量）：透支时快速往下掉，吃好睡好要好几天才攒回来。
   { id: 'fitness.starving', bar: 'fitness', when: (s) => bar(s, 'stamina') < BODY.burnout, perHour: -20, note: '饿空了还在撑，体能透支' },
-  { id: 'fitness.tired', bar: 'fitness', when: (s) => bar(s, 'energy') < BODY.burnout, perHour: -20, note: '累垮了还在撑，体能透支' },
+  // 精力见底先从底子里抽一格硬撑（core/world 的底子规则）；底子也空了还在撑，才透支体能。
+  { id: 'fitness.tired', bar: 'fitness', when: (s) => base(s, 'energy') <= 0 && bar(s, 'energy') < BODY.burnout, perHour: -20, note: '欠的觉把底子掏空了还在撑，体能透支' },
   { id: 'fitness.thirsty', bar: 'fitness', when: (s) => bar(s, 'water') < BODY.burnout, perHour: -20, note: '缺水还在撑，体能透支' },
   { id: 'fitness.nourished', bar: 'fitness', when: fed, perHour: 1, note: '吃好睡好，体能慢慢攒回来' },
 ];
@@ -74,7 +83,7 @@ export interface BandDef {
   note: string;
   /** 这是"值得浮现"的带：第一个真实后果。 */
   reveal?: boolean;
-  /** 第一次浮现时事件流的话（慢变量可以不写，让等级变化自己说话）。 */
+  /** 第一次进入这个带时事件流的话（data/cues 据此派生；慢变量可以不写，让等级变化自己说话）。 */
   line?: string;
   /** 浮现后回到安全线以上/以下多久才淡出。 */
   hideAt?: number;
@@ -96,7 +105,7 @@ export const BANDS: readonly BandDef[] = [
   // 精力：只有睡觉能补，但浮现点同样由后果决定，不由"离满还差多少"决定。
   { id: 'energy.low', bar: 'energy', dir: 'below', at: BODY.nourished, note: '失去恢复加成，该休息或睡觉了', reveal: true, line: '累了。', hideAt: BODY.calm, holdMinutes: 30 },
   { id: 'energy.mood', bar: 'energy', dir: 'below', at: BODY.moodLow.energy, note: '累垮了，心情开始往下掉' },
-  { id: 'energy.burnout', bar: 'energy', dir: 'below', at: BODY.burnout, note: '累垮了还在撑，体能被透支' },
+  { id: 'energy.burnout', bar: 'energy', dir: 'below', at: BODY.burnout, note: '快见底了：再撑就掉一级；等级也到底了就透支体能' },
 
   // 体能（慢变量）：只在接近升级/降级边界时值得看，和快变量分开。
   { id: 'fitness.low', bar: 'fitness', dir: 'below', at: BODY.fitnessEdge.low, note: '快到降级边界了，别再透支', reveal: true, hideAt: 30, holdMinutes: 120 },

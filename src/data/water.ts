@@ -7,7 +7,7 @@
 // 用水的地方（泡面、喝水）只问「哪里有够烫的水」，不认具体是哪个容器。
 // 小人在不在旁边，这些都照常发生。数值是第一版初值，按试玩调。
 
-import type { Effect } from '../core/rules';
+import type { ActionDef, Effect } from '../core/rules';
 import type { GameState } from '../core/state';
 import type { ProcessDef } from '../core/world';
 import { say } from '../core/feed';
@@ -146,6 +146,23 @@ export const WATER_PROCESS: ProcessDef = {
     for (const v of VESSELS) stepVessel(s, v);
   },
 };
+
+/**
+ * 每个容器都能把水倒掉：接错了、没烧开就倒进了饮水机，倒掉重来。开着加热时先关掉。
+ * 容器共用这一条，加新容器不用另写。
+ */
+export const DUMP_ACTIONS: readonly ActionDef[] = VESSELS.map(
+  (v): ActionDef => ({
+    id: `dump-${v.id}`,
+    object: v.id,
+    label: '把水倒掉',
+    temper: 'impulse',
+    requires: (s) => w(s, v.id, 'water') > 0 && !w(s, v.id, 'on'),
+    minutes: 1,
+    onStart: { set: { [`${v.id}.water`]: 0, [`${v.id}.temp`]: WATER.roomTemp, [`${v.id}.raw`]: 0 } },
+    line: `把${v.name}里的水倒掉了。`,
+  }),
+);
 
 /** 开局：水壶和饮水机都是空的。 */
 export const START_WATER: Record<string, number> = Object.fromEntries(

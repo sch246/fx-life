@@ -3,13 +3,16 @@
 import { describe, expect, it } from 'vitest';
 import { perform, stepWorld } from '../src/core/world';
 import { isVisible } from '../src/core/reveal';
-import { barPreview, blockedReason, objectAvailable, objectMenu, poseOf, running, stopTask } from '../src/core/rules';
+import { barPreview, blockedReason, objectAvailable, objectMenu, poseOf, running, stopTask, whyNot } from '../src/core/rules';
 import { learned } from '../src/core/skills';
 import { dispenserWater, hasHot, k, w } from '../src/data/water';
 import { NOODLES, heat, soak, stage } from '../src/data/noodles';
 import { SKILLS } from '../src/data/skills';
 import { CONTENT, DEMO_END_FLAG, newGame } from '../src/data';
 import { at } from '../src/core/time';
+import { OBJECTS } from '../src/data/objects';
+import { PREVIEW_STEPS } from '../src/data/bars';
+import { CARRIED, carrying } from '../src/data/items';
 import { act, carefulPlayer, lyingDown, run, tryDo } from './helpers';
 
 const skill = (id: string) => SKILLS.find((x) => x.id === id)!;
@@ -90,6 +93,55 @@ describe('第一片走查', () => {
     expect(objectAvailable(s, CONTENT.actions, 'phone', true)).toBe(false);
   });
 
+  it('预览里箭头的个数表示快慢：躺着一个，看窗外两个，夜里睡觉三个，开着灯睡少一个', () => {
+    const s = newGame(1);
+    s.t = at(1, 23);
+    expect(barPreview(s, act('lie'), PREVIEW_STEPS).energy).toBe(1);
+    expect(barPreview(s, act('look'), PREVIEW_STEPS).mood).toBe(2);
+    expect(barPreview(s, act('sleep'), PREVIEW_STEPS).energy).toBe(3);
+    perform(s, CONTENT, act('lamp-on'));
+    expect(barPreview(s, act('sleep'), PREVIEW_STEPS).energy).toBe(2);
+  });
+
+  it('手机带在身上，不是房间里的物件：站在哪都能拿出来回消息，睡着时拿不出来', () => {
+    const s = newGame(1);
+    expect(OBJECTS.some((o) => o.id === 'phone')).toBe(false);
+    expect(CARRIED.map((c) => c.id)).toContain('phone');
+    expect(carrying(s, 'phone')).toBe(true);
+    s.t = at(1, 19, 29);
+    run(s, 2);
+    perform(s, CONTENT, act('look'));
+    expect(tryDo(s, act('reply-arrived'))).toBe(true);
+    expect(s.ongoing?.actionId).toBe('look');
+    // 手机不在身上了（以后丢了、落在哪里），消息也就回不了。
+    const lost = newGame(1);
+    lost.items.phone = 0;
+    lost.t = at(1, 19, 31);
+    stepWorld(lost, CONTENT);
+    expect(blockedReason(lost, act('reply-arrived'))).toBe('requires');
+  });
+
+  it('点灰掉的东西，小人说得出为什么：心情差不想出门、饮水机没水、桌上没面、睡着了', () => {
+    const s = newGame(1);
+    const why = (objectId: string) =>
+      whyNot(s, CONTENT.actions, CONTENT.actions.filter((a) => a.object === objectId && !a.auto), CONTENT.moodWhy!);
+    expect(objectAvailable(s, CONTENT.actions, 'door')).toBe(false);
+    expect(why('door')).toBe('心情太差了，不想出门。');
+    expect(objectAvailable(s, CONTENT.actions, 'dispenser')).toBe(false);
+    expect(why('dispenser')).toBe('饮水机里没水。');
+    expect(objectAvailable(s, CONTENT.actions, 'table')).toBe(false);
+    expect(why('table')).toBe('桌上没有面。');
+    // 能做的时候不编原因。
+    expect(why('window')).toBeNull();
+    s.t = at(1, 22);
+    perform(s, CONTENT, act('lie'));
+    perform(s, CONTENT, act('sleep'));
+    run(s, 30);
+    expect(s.ongoing?.occupies).toBe(true);
+    expect(why('window')).toBe('Zzz……');
+    expect(why('phone')).toBe('Zzz……');
+  });
+
   it('水壶：5 分钟烧开，开着不关 30 分钟烧干，再干烧 5 分钟烧坏', () => {
     const s = newGame(1);
     perform(s, CONTENT, act('fill-kettle'));
@@ -141,6 +193,31 @@ describe('第一片走查', () => {
     perform(t, CONTENT, act('pour-dispenser'));
     t.ongoing = null;
     expect(barPreview(t, act('drink'))).toEqual({ water: 1 });
+  });
+
+  it('饮水机里的生水不用非得喝完：倒掉，再倒烧开的进去；开着的水壶要先关掉才能倒', () => {
+    const s = newGame(1);
+    perform(s, CONTENT, act('fill-kettle'));
+    s.ongoing = null;
+    perform(s, CONTENT, act('pour-dispenser'));
+    s.ongoing = null;
+    const menu = () => objectMenu(s, CONTENT.actions, 'dispenser', () => true).map((e) => e.action.id);
+    expect(menu()).toEqual(['drink', 'dump-dispenser']);
+    perform(s, CONTENT, act('dump-dispenser'));
+    s.ongoing = null;
+    expect(dispenserWater(s)).toBe(0);
+    expect(w(s, 'dispenser', 'raw')).toBe(0);
+    expect(menu()).toEqual([]);
+
+    perform(s, CONTENT, act('fill-kettle'));
+    s.ongoing = null;
+    perform(s, CONTENT, act('kettle-on'));
+    expect(blockedReason(s, act('dump-kettle'))).toBe('requires');
+    run(s, 5);
+    perform(s, CONTENT, act('kettle-off'));
+    perform(s, CONTENT, act('pour-dispenser'));
+    s.ongoing = null;
+    expect(barPreview(s, act('drink'))).toEqual({ water: 1 });
   });
 
   describe('泡面', () => {
@@ -226,6 +303,35 @@ describe('第一片走查', () => {
       expect(bland.accum['skill:soak'] ?? 0).toBe(0);
       run(bland, NOODLES.eatMin);
       expect(bland.feed.at(-1)!.text).toBe('一桶面吃完了。料没放全，有点淡。');
+    });
+
+    it('冲上水敞着就能吃，没盖过就是硬的；揭开盖子也是敞着，能吃也能盖回去', () => {
+      const s = newGame(1);
+      s.things['kettle.water'] = 1.5;
+      s.things['kettle.temp'] = 100;
+      for (const id of ['take-noodles', 'noodle-tear', 'noodle-unpack', 'noodle-pour']) tryDo(s, act(id));
+      const table = () => objectMenu(s, CONTENT.actions, 'table', () => true).map((e) => e.action.id);
+      expect(table()).toContain('noodle-eat');
+      expect(table()).toContain('noodle-cover');
+      tryDo(s, act('noodle-cover'));
+      expect(table()).toEqual(['noodle-open']);
+      run(s, 4);
+      perform(s, CONTENT, act('noodle-open'));
+      expect(table()).toContain('noodle-eat');
+      expect(table()).toContain('noodle-cover');
+    });
+
+    it('拿出来还没拆的面能放回箱子；拆开了就放不回去', () => {
+      const s = newGame(1);
+      const before = s.items.noodles;
+      tryDo(s, act('take-noodles'));
+      expect(s.items.noodles).toBe(before - 1);
+      expect(tryDo(s, act('noodle-putback'))).toBe(true);
+      expect(stage(s)).toBe(0);
+      expect(s.items.noodles).toBe(before);
+      tryDo(s, act('take-noodles'));
+      tryDo(s, act('noodle-tear'));
+      expect(blockedReason(s, act('noodle-putback'))).toBe('requires');
     });
 
     it('第一次撕开时技能栏出现泡面；泡好三次才学会，之后能自动泡', () => {

@@ -9,26 +9,29 @@ import { moodLv } from '../core/rules';
 import { BODY } from './body';
 import { MESSAGES } from './messages';
 import { learned } from './skills';
-import { fallAsleepMin, roomLight, sleepQuality } from './room';
-import { WATER, dispenserWater, drinkBars, fill, hotSource, k, pour, vessel, w } from './water';
+import { fallAsleepMin, lampOn, roomLight, sleepQuality } from './room';
+import { carrying } from './items';
+import { DUMP_ACTIONS, WATER, dispenserWater, drinkBars, fill, hotSource, k, pour, vessel, w } from './water';
 import { AUTO_NOODLES, NOODLES, NOODLE_ACTIONS, stage } from './noodles';
 
-const rested = (s: GameState) => (s.bars.energy ?? 0) >= 100;
 const starving = (s: GameState) => (s.bars.stamina ?? 0) < BODY.hungryWake;
+/** 欠着觉：精力的底子没攒满。 */
+const owed = (s: GameState) => (s.levels.energy ?? BODY.rested) < BODY.rested - 1e-9;
+/** 睡足了：精力满，底子也攒满了。 */
+const rested = (s: GameState) => (s.bars.energy ?? 0) >= 100 && !owed(s);
+/** 房间太亮，睡不着。累垮了、欠着觉，就顾不上亮不亮。 */
+const tooBright = (s: GameState) => roomLight(s) > 0.6 && (s.bars.energy ?? 0) > 30 && !owed(s);
 /**
  * 自然醒：睡饱了天亮就醒；没睡饱也挡不住晨光——房间够亮就先醒，不等补满。
  * 这样熬夜欠下的觉会带进第二天，而不是在醒来前自动还清。
+ * 同一条规则也让白天睡不着：闭上眼睛，房间太亮，就起来了。
  * 光源自 data/room 的 roomLight，不是写死的起床时刻：以后夜班白天补觉，只要房间够暗就行。
- * 房间一直全暗（遮光窗帘）时，靠"躺够九小时"兜底，不会睡不醒。
+ * 欠着觉时，条补满之后多出来的才攒回底子，所以会一直睡下去补觉，天亮也叫不醒。
+ * 房间一直全暗（遮光窗帘）时，靠"躺够九小时"兜底（欠着觉是十二小时），不会睡不醒。
  */
 const wakeUp = (s: GameState) => {
   const since = s.t - (s.ongoing?.start ?? s.t);
-  return (
-    (rested(s) && roomLight(s) > 0.2) ||
-    (roomLight(s) > 0.6 && (s.bars.energy ?? 0) > 30) ||
-    since >= 9 * 60 ||
-    starving(s)
-  );
+  return (rested(s) && roomLight(s) > 0.2) || tooBright(s) || since >= (owed(s) ? 12 : 9) * 60 || starving(s);
 };
 
 /** 躺在床上（还没睡）：睡觉要先躺下。 */
@@ -38,15 +41,19 @@ const SLEEP: Omit<ActionDef, 'id' | 'label'> = {
   object: 'bed',
   temper: 'impulse',
   requires: lying,
+  // 睡觉是躺着时闭上眼睛：醒了、睡不着、睁眼，都还躺在床上；「起来」才下床。
+  on: 'lie',
   // 净增 = 这里的 14 × 睡眠质量 − 精力基线 4。夜里质量 0.9，净 +8.6/时，
   // 约八小时正好补回一天醒着消耗；白天亮着质量低，补得慢。数值由"一夜补一天"倒推。
   perHour: { bars: { energy: 14 } },
   rate: sleepQuality,
   stopWhen: wakeUp,
-  stopLabel: '起来',
-  endLine: '醒了。',
+  stopLabel: '睁眼',
+  // 还没睡着就被光挡回来，是睡不着；睡着了再醒，是醒了。
+  endLine: (s) => (!s.ongoing?.occupies && tooBright(s) ? '太亮了，睡不着。' : '醒了。'),
   // 躺下一会儿才睡着；睡着之前还能看看手机。
   occupies: (s, since) => since >= fallAsleepMin(s),
+  busyWhy: 'Zzz……',
   pose: (s) => (s.ongoing?.occupies ? 'sleep' : 'lie'),
 };
 
@@ -60,14 +67,31 @@ export const ACTIONS: readonly ActionDef[] = [
     perHour: { bars: { mood: 6 } },
     pose: 'look',
   },
+  // 灯：拉一下开，再拉一下关。开着屋里亮堂，也亮得睡不着（见 data/room 的 roomLight）。
+  {
+    id: 'lamp-on',
+    object: 'lamp',
+    label: '开灯',
+    temper: 'impulse',
+    requires: (s) => !lampOn(s),
+    onStart: { set: { 'lamp.on': 1 } },
+  },
+  {
+    id: 'lamp-off',
+    object: 'lamp',
+    label: '关灯',
+    temper: 'impulse',
+    requires: lampOn,
+    onStart: { set: { 'lamp.on': 0 } },
+  },
   {
     // 不在床上时，床上只有「躺下」；躺上去之后才能睡。
     id: 'lie',
     object: 'bed',
     label: '躺下',
     temper: 'impulse',
-    // 净增约 +2/时（+6 − 基线 4）：白天不能睡时，躺着也能稍微歇过来一点。
-    perHour: { bars: { energy: 6, mood: 1 } },
+    // 躺着只让精力掉得慢一点（+3 − 基线 4 = 净 −1/时），补不上来：精力只有睡觉能补。
+    perHour: { bars: { energy: 3, mood: 1 } },
     stopLabel: '起来',
     pose: 'lie',
   },
@@ -137,6 +161,7 @@ export const ACTIONS: readonly ActionDef[] = [
     auto: true,
     background: true,
     requires: (s) => learned(s, 'boil') && !k(s, 'broken') && !k(s, 'on'),
+    why: (s) => (k(s, 'broken') ? '水壶烧坏了。' : k(s, 'on') ? '水壶已经开着了。' : ''),
     onStart: (s): Effect => ({ set: { ...fill(s, 'kettle').set, 'kettle.on': 1 } }),
     stopWhen: (s) => !k(s, 'on') || k(s, 'temp') >= 100 || !!k(s, 'broken'),
     onEnd: { set: { 'kettle.on': 0 } },
@@ -148,6 +173,8 @@ export const ACTIONS: readonly ActionDef[] = [
   {
     ...AUTO_NOODLES,
     requires: (s) => learned(s, 'soak') && (s.items.noodles ?? 0) > 0 && stage(s) === 0 && !!hotSource(s, NOODLES.water),
+    why: (s) =>
+      (s.items.noodles ?? 0) <= 0 ? '箱子里没有面了。' : stage(s) !== 0 ? '桌上还有一桶。' : !hotSource(s, NOODLES.water) ? '没有热水。' : '',
   },
   // ---- 饮水机 ----
   {
@@ -157,6 +184,7 @@ export const ACTIONS: readonly ActionDef[] = [
     label: '喝一杯水',
     temper: 'impulse',
     requires: (s) => dispenserWater(s) >= WATER.glass - 0.001,
+    why: '饮水机里没水。',
     minutes: 2,
     onStart: (s) => ({
       things: { 'dispenser.water': -WATER.glass },
@@ -164,7 +192,9 @@ export const ACTIONS: readonly ActionDef[] = [
     }),
     line: (s) => (w(s, 'dispenser', 'raw') > 0.01 ? '接了一杯水喝。有股生水味。' : '接了一杯水喝。'),
   },
-  // 手机：躺着、坐着都能看，回消息只用手，不起身。
+  // 水壶、饮水机：都能把水倒掉（data/water）。
+  ...DUMP_ACTIONS,
+  // 手机带在身上（data/items）：躺着、坐着都能看，回消息只用手，不起身。
   ...MESSAGES.map(
     (m): ActionDef => ({
       id: `reply-${m.id}`,
@@ -172,7 +202,7 @@ export const ACTIONS: readonly ActionDef[] = [
       label: m.reply,
       temper: 'impulse',
       hands: true,
-      requires: (s) => !!s.flags[`msg:${m.id}`] && !s.flags[`replied:${m.id}`],
+      requires: (s) => carrying(s, 'phone') && !!s.flags[`msg:${m.id}`] && !s.flags[`replied:${m.id}`],
       onStart: { flags: [`replied:${m.id}`], bars: { mood: m.mood } },
     }),
   ),

@@ -5,7 +5,13 @@ import { isVisible } from '../src/core/reveal';
 import { barValue, BANDS, BODY, EFFECTS, inBand, revealBands } from '../src/data/body';
 import { BARS } from '../src/data/bars';
 import { CONTENT, newGame } from '../src/data';
-import { debugText } from '../src/core/debug';
+import { debugText } from '../src/scene/debug';
+import { perform } from '../src/core/world';
+import { at } from '../src/core/time';
+
+import { act, run } from './helpers';
+import { stopOngoing } from '../src/core/rules';
+import { roomLight } from '../src/data/room';
 
 const barIds = new Set(BARS.map((b) => b.id));
 
@@ -58,6 +64,163 @@ describe('身体模型：单一事实来源', () => {
     s.bars.stamina = 39.9;
     expect(inBand(s, hungry)).toBe(true);
     expect(barValue(s, 'stamina')).toBeCloseTo(39.9);
+  });
+
+  it('正在做的事让条变化时条就浮现：第一夜精力还高，睡着时也看得见它往上涨，醒来稳定后淡出', () => {
+    const s = newGame(1);
+    s.t = at(1, 22);
+    expect(s.bars.energy).toBeGreaterThan(BODY.nourished);
+    perform(s, CONTENT, act('lie'));
+    perform(s, CONTENT, act('sleep'));
+    stepWorld(s, CONTENT);
+    expect(isVisible(s, 'bar:energy')).toBe(true);
+    run(s, 60);
+    expect(s.ongoing?.actionId).toBe('sleep');
+    expect(isVisible(s, 'bar:energy')).toBe(true);
+    // 条是因为正在涨才浮现的，人并不累：「累了。」要等真的跌破 40 才说。
+    expect(s.feed.some((l) => l.text === '累了。')).toBe(false);
+    while (s.ongoing?.actionId === 'sleep') stepWorld(s, CONTENT);
+    // 醒了还躺着，精力还在涨，条还在；起来之后稳定一阵才淡出。
+    expect(s.ongoing?.actionId).toBe('lie');
+    expect(isVisible(s, 'bar:energy')).toBe(true);
+    stopOngoing(s);
+    run(s, 40);
+    expect(isVisible(s, 'bar:energy')).toBe(false);
+  });
+
+  it('白天太亮睡不着，事件流写一句；累垮了才顾不上亮，照样睡', () => {
+    const s = newGame(1);
+    s.t = at(2, 14);
+    s.bars.energy = 60;
+    perform(s, CONTENT, act('lie'));
+    perform(s, CONTENT, act('sleep'));
+    stepWorld(s, CONTENT);
+    expect(s.ongoing?.actionId).toBe('lie');
+    expect(s.feed.some((l) => l.text === '太亮了，睡不着。')).toBe(true);
+    expect(s.feed.some((l) => l.text === '醒了。')).toBe(false);
+
+    const worn = newGame(1);
+    worn.t = at(2, 14);
+    worn.bars.energy = 25;
+    perform(worn, CONTENT, act('lie'));
+    perform(worn, CONTENT, act('sleep'));
+    run(worn, 60);
+    expect(worn.ongoing?.actionId).toBe('sleep');
+    expect(worn.ongoing?.occupies).toBe(true);
+  });
+
+  it('夜里开着灯太亮睡不着，关了灯才睡得着', () => {
+    const s = newGame(1);
+    s.t = at(1, 23);
+    s.bars.energy = 60;
+    perform(s, CONTENT, act('lamp-on'));
+    expect(roomLight(s)).toBeGreaterThan(0.6);
+    perform(s, CONTENT, act('lie'));
+    perform(s, CONTENT, act('sleep'));
+    stepWorld(s, CONTENT);
+    expect(s.ongoing?.actionId).toBe('lie');
+    expect(s.feed.some((l) => l.text === '太亮了，睡不着。')).toBe(true);
+
+    perform(s, CONTENT, act('lamp-off'));
+    expect(roomLight(s)).toBeLessThan(0.2);
+    perform(s, CONTENT, act('lie'));
+    perform(s, CONTENT, act('sleep'));
+    run(s, 60);
+    expect(s.ongoing?.actionId).toBe('sleep');
+    expect(s.ongoing?.occupies).toBe(true);
+  });
+
+  it('精力见底从底子抽一格、条回到「累了」线下硬撑；欠着觉时天亮叫不醒，补满后接着睡才攒回底子', () => {
+    const s = newGame(1);
+    s.t = at(2, 3);
+    s.bars.energy = 0.01;
+    stepWorld(s, CONTENT);
+    expect(s.levels.energy).toBe(BODY.rested - 1);
+    expect(s.bars.energy).toBeLessThan(BODY.nourished);
+    expect(s.feed.some((l) => l.text === '熬过头了，硬撑着。')).toBe(true);
+
+    // 夜里睡下：欠着觉，第二天早上八点太阳照进来也不醒；不欠觉的人同样的精力早就被晃醒了。
+    const sleepAt = (lv: number) => {
+      const x = newGame(1);
+      x.t = at(2, 23);
+      x.levels.energy = lv;
+      x.bars.energy = 20;
+      x.bars.stamina = 90; // 吃饱了睡，不会半夜饿醒
+      x.bars.water = 90;
+      perform(x, CONTENT, act('lie'));
+      perform(x, CONTENT, act('sleep'));
+      run(x, 9 * 60);
+      return x;
+    };
+    expect(sleepAt(BODY.rested - 1).ongoing?.actionId).toBe('sleep');
+    expect(sleepAt(BODY.rested).ongoing?.actionId).toBe('lie');
+
+    // 睡到把条补满还接着睡，多出来的攒回底子，攒够一格升回一级；条一直是满的。
+    const r = newGame(1);
+    r.t = at(2, 22);
+    r.levels.energy = BODY.rested - 1;
+    r.bars.energy = 60;
+    r.bars.stamina = 90;
+    r.bars.water = 90;
+    perform(r, CONTENT, act('lie'));
+    perform(r, CONTENT, act('sleep'));
+    while (r.ongoing?.actionId === 'sleep' && r.levels.energy < BODY.rested) stepWorld(r, CONTENT);
+    expect(r.levels.energy).toBe(BODY.rested);
+    expect(r.bars.energy).toBe(100);
+    expect(r.feed.some((l) => l.text === '觉补回来了。')).toBe(true);
+  });
+
+  it('底子：满了多出来的才攒进去，条掉下来时不动它，见底了才抽一格', () => {
+    const s = createState({ bars: { mood: 99 }, levels: { mood: 1 } });
+    const mood = { id: 'mood', name: '心情', initial: 0, levels: { start: 1, max: 4, chunk: 20 } };
+    const c = { ...CONTENT, bars: [mood], cues: [], processes: [], manualBonus: undefined };
+    // 回一条消息 +10：条满了，多出来的 9 攒进底子（9/20 格）。
+    perform(s, c, { id: 'x', object: 'phone', label: 'x', temper: 'impulse', requires: () => true, onStart: { bars: { mood: 10 } } });
+    expect(s.bars.mood).toBe(100);
+    expect(s.levels.mood).toBeCloseTo(1.45);
+    // 条往下掉，底子不动。
+    s.bars.mood = 30;
+    stepWorld(s, c);
+    expect(s.levels.mood).toBeCloseTo(1.45);
+    // 见底了还在掉：抽一格顶上，等级降一级，没攒满的那部分留着。
+    s.bars.mood = -2;
+    stepWorld(s, c);
+    expect(s.levels.mood).toBeCloseTo(0.45);
+    expect(s.bars.mood).toBeCloseTo(18);
+    // 再见底：只剩不到一格，抽光它；底子空了就不再抽。
+    s.bars.mood = -1;
+    stepWorld(s, c);
+    expect(s.levels.mood).toBe(0);
+    expect(s.bars.mood).toBeCloseTo(8);
+    s.bars.mood = -1;
+    stepWorld(s, c);
+    expect(s.bars.mood).toBe(0);
+  });
+
+  it('躺着补不上精力，只让它掉得慢一点；躺着熬到见底，照样掉一级', () => {
+    const s = newGame(1);
+    s.t = at(1, 20);
+    s.bars.energy = 60;
+    perform(s, CONTENT, act('lie'));
+    run(s, 120);
+    expect(s.bars.energy).toBeLessThan(60);
+    expect(s.bars.energy).toBeGreaterThan(60 - 8);
+    s.bars.energy = 0.01;
+    run(s, 2);
+    expect(s.levels.energy).toBe(BODY.rested - 1);
+  });
+
+  it('等级还没掉到底时，精力见底不伤体能；掉到底还撑着才透支', () => {
+    const s = newGame(1);
+    s.t = at(2, 12);
+    s.bars.energy = 5;
+    const before = s.bars.fitness;
+    run(s, 30);
+    expect(s.bars.fitness).toBeGreaterThanOrEqual(before);
+    s.levels.energy = 0;
+    s.bars.energy = 5;
+    run(s, 30);
+    expect(s.bars.fitness).toBeLessThan(before);
   });
 
   it('调试快照每根条都列到', () => {

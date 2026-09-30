@@ -1,11 +1,13 @@
 // 场景：房间、窗户、角色、物件、状态条、技能栏、事件流和暂停的绘制与点击。
 // 只读状态、只通过回调发出意图；不直接改状态，规则留在 core/。
 // 条的淡入淡出靠切换 .shown 类；物件常驻，靠切换 .available 类在灰与上色之间过渡。
-// 点物件只是打开它：弹出能做的事（menu），凑近看（closeup），或者在右侧拿起手机（screen）。
+// 点物件只是打开它：弹出能做的事（menu），凑近看（closeup）。身上带的东西（手机）在左下角一栏，点一下在右侧拿出来（screen）。
 // 菜单和近景里只列现在能做的事；鼠标移到物件上就弹出菜单，少点一下。
 // 近景和手机都没有「离开」按钮：点它们四周就合上。手机可以用图钉固定，固定着就一直拿在手上，边看边做别的。
 // 做物件上的事时，角色走到物件跟前；点地板，角色在地板上走过去（左右和前后）。
-// 地板上的东西按远近排前后（data/objects 的 layerOf）。夜里房间变暗是给墙、地板、物件和角色降亮度，窗外不受影响。
+// 地板上的东西按远近排前后（data/objects 的 layerOf）。夜里房间变暗是给墙、地板、物件和角色降亮度，窗外不受影响；
+// 开了灯，房间亮回来，罩上一层暖黄的光。
+// 点灰掉的东西（或者做不了的技能），小人头上冒一句为什么不行（core/rules 的 whyNot），不写进事件流。
 // 角色站在哪只是画面，不影响规则。
 
 import type { GameState } from '../core/state';
@@ -14,19 +16,24 @@ import type { ActionDef, MenuEntry } from '../core/rules';
 import type { SkillDef } from '../core/skills';
 import type { ObjectDef } from '../data/objects';
 import { isVisible } from '../core/reveal';
-import { barPreview, blockedReason, objectAvailable, objectMenu, poseOf, running } from '../core/rules';
+import { barPreview, blockedReason, lv, objectAvailable, objectMenu, poseOf, running, whyNot } from '../core/rules';
 import { learned, skillProgress } from '../core/skills';
 import { daylight, stamp, hm } from '../core/time';
 import { MESSAGES } from '../data/messages';
 import { dispenserWater, hotSource, k, vessel } from '../data/water';
 import { NOODLES, PACKETS, heat, n, quality, soak, stage } from '../data/noodles';
 import { layerAt, layerOf, standAt, type Spot } from '../data/objects';
+import { CARRIED, carrying } from '../data/items';
+import { lampOn } from '../data/room';
+import { PREVIEW_STEPS } from '../data/bars';
 import { HAIR_COLOR, PERSON_PARTS, SKIN, outfit, pronoun } from '../data/person';
 import { CityView } from './window';
 
 export interface SceneIntents {
   togglePause(): void;
   clickObject(id: string): void;
+  /** 点了身上带的东西（手机）：拿出来，或者放回去。 */
+  openItem(id: string): void;
   chooseEntry(entry: MenuEntry): void;
   /** 在近景、屏幕或技能栏里点了某件事。开始了返回 true。 */
   doAction(actionId: string): boolean;
@@ -59,7 +66,7 @@ const CONFETTI = ['#f5d36b', '#e88a5b', '#8fb3a0', '#9cc3ff', '#e5484d', '#f3efe
 function levelStyle(b: BarDef, s: GameState) {
   const st = b.levels?.styles;
   if (!st) return null;
-  return st[Math.min(st.length - 1, s.levels[b.id] ?? 0)];
+  return st[Math.min(st.length - 1, lv(s, b.id))];
 }
 
 export class Scene {
@@ -71,9 +78,15 @@ export class Scene {
   private readonly tableCup: HTMLButtonElement;
   private readonly kettleFx: HTMLElement;
   private readonly dispWater: HTMLElement;
+  private readonly lampGlow: HTMLElement;
+  private readonly pockets = new Map<string, HTMLButtonElement>();
   private readonly skillsEl: HTMLElement;
   private readonly skillPanel: HTMLElement;
   private readonly toast: HTMLElement;
+  private readonly bubble: HTMLElement;
+  private readonly head: HTMLElement;
+  private bubbleTimer = 0;
+  private paused = false;
   private readonly cheer: HTMLElement;
   private readonly menu: HTMLElement;
   private readonly closeup: HTMLElement;
@@ -81,7 +94,7 @@ export class Scene {
   private readonly end: HTMLElement;
   private readonly ff: HTMLElement;
   private readonly objs = new Map<string, HTMLElement>();
-  private readonly bars = new Map<string, { el: HTMLElement; fill: HTMLElement; track: HTMLElement }>();
+  private readonly bars = new Map<string, { el: HTMLElement; fill: HTMLElement; track: HTMLElement; base: HTMLElement }>();
   private readonly feed: HTMLElement;
   private readonly pauseBtn: HTMLButtonElement;
   private readonly who: HTMLElement;
@@ -137,10 +150,16 @@ export class Scene {
           <button type="button" class="table-cup" hidden aria-label="泡面"><i class="film"></i><i class="steam"></i><i class="gauges">${GAUGES}</i><span class="tip">泡面</span></button>
           <div class="kettle-fx"><i class="glow"></i><i class="steam"></i></div>
           <div class="disp-water"></div>
+          <div class="lamp-glow"></div>
+          <div class="lamp-light"></div>
           <div class="character" aria-hidden="true"><i class="hair-back"></i><i class="leg l"></i><i class="leg r"></i><i class="skirt"></i><i class="neck"></i><i class="torso"></i><i class="arm l"></i><i class="arm r"></i><i class="head"><i class="hair"></i><i class="eye l"></i><i class="eye r"></i><i class="cheek l"></i><i class="cheek r"></i></i><i class="held-phone"></i></div>
           <nav class="skills" aria-label="技能"></nav>
+          <nav class="pockets" aria-label="身上">${CARRIED.map(
+            (c) => `<button type="button" class="pk pk-${c.id}" data-item="${c.id}" aria-label="${esc(c.name)}"><i></i><b></b><span class="tip">${esc(c.name)}</span></button>`,
+          ).join('')}</nav>
           <div class="skill-panel" hidden></div>
           <div class="toast" aria-live="polite"></div>
+          <div class="say" aria-live="polite" hidden></div>
           <div class="menu" role="menu" hidden></div>
           <div class="closeup" hidden></div>
           <div class="phone-screen" hidden></div>
@@ -172,9 +191,13 @@ export class Scene {
     this.tableCup = $('.table-cup');
     this.kettleFx = $('.kettle-fx');
     this.dispWater = $('.disp-water');
+    this.lampGlow = $('.lamp-glow');
+    for (const b of root.querySelectorAll<HTMLButtonElement>('.pk')) this.pockets.set(b.dataset.item!, b);
     this.skillsEl = $('.skills');
     this.skillPanel = $('.skill-panel');
     this.toast = $('.toast');
+    this.bubble = $('.say');
+    this.head = $('.character .head');
     this.cheer = $('.cheer');
     this.menu = $('.menu');
     this.closeup = $('.closeup');
@@ -198,6 +221,16 @@ export class Scene {
       intents.clickObject('table');
     });
     $('.restart').addEventListener('click', () => intents.restart());
+    // 身上的东西：点一下拿出来，再点一下放回去。
+    $('.pockets').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const t = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-item]');
+      if (!t) return;
+      this.hideMenu();
+      this.panelSkill = null;
+      if (t.classList.contains('off')) return this.explain(this.onObject(t.dataset.item!));
+      intents.openItem(t.dataset.item!);
+    });
     // 点房间里空的地方：收起菜单，放下手机。点到房间外面（页面四周、状态条、事件流），近景也合上。
     this.room.addEventListener('click', () => this.dismiss());
     document.addEventListener('click', (e) => {
@@ -260,9 +293,10 @@ export class Scene {
     this.skillsEl.addEventListener('click', (e) => {
       e.stopPropagation();
       const t = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-skill]');
-      if (!t || t.disabled || !this.state) return;
+      if (!t || !this.state) return;
       const sk = this.skills.find((x) => x.id === t.dataset.skill)!;
       this.hideMenu();
+      if (t.classList.contains('blocked')) return this.explain([this.actions.get(sk.auto)!]);
       if (!learned(this.state, sk)) return this.showSkillPanel(this.panelSkill === sk.id ? null : sk.id);
       if (running(this.state, sk.auto)) this.intents.stop(sk.auto);
       else this.act(sk.auto);
@@ -288,6 +322,11 @@ export class Scene {
       el.addEventListener('click', (e) => {
         e.stopPropagation();
         this.panelSkill = null;
+        // 灰着的物件：点了也做不了，小人说一句为什么。
+        if (!el.classList.contains('available')) {
+          this.hideMenu();
+          return this.explain(this.onObject(o.id));
+        }
         if (menuObj) return this.openMenu(o.id, (e as PointerEvent).pointerType === 'mouse');
         this.hideMenu();
         intents.clickObject(o.id);
@@ -300,14 +339,21 @@ export class Scene {
     this.tableCup.style.zIndex = String(layerOf('table') + 2);
     this.kettleFx.style.zIndex = String(layerOf('kettle') + 1);
     this.dispWater.style.zIndex = String(layerOf('dispenser') + 1);
+    this.lampGlow.style.zIndex = String(layerOf('lamp') + 1);
 
     const barsEl = $('.bars');
     for (const b of content.bars) {
       const el = document.createElement('div');
       el.className = `bar bar-${b.id}`;
-      el.innerHTML = `<span class="bar-name">${b.name}</span><span class="bar-track"><span class="bar-fill"></span></span>`;
+      // 条下面一道细线是正在攒的那一格底子：满了还在补，它就一点点变长，攒够一格条就变粗。
+      el.innerHTML = `<span class="bar-name">${b.name}</span><span class="bar-col"><span class="bar-track"><span class="bar-fill"></span></span><span class="bar-base"><i></i></span></span>`;
       barsEl.appendChild(el);
-      this.bars.set(b.id, { el, fill: el.querySelector('.bar-fill')!, track: el.querySelector('.bar-track')! });
+      this.bars.set(b.id, {
+        el,
+        fill: el.querySelector('.bar-fill')!,
+        track: el.querySelector('.bar-track')!,
+        base: el.querySelector('.bar-base')!,
+      });
     }
   }
 
@@ -337,6 +383,42 @@ export class Scene {
     this.character.classList.add('walking');
     clearTimeout(this.walkTimer);
     this.walkTimer = window.setTimeout(() => this.character.classList.remove('walking'), dur * 1000);
+  }
+
+  /** 某个物件上的事（手动的、已经浮现的）。 */
+  private onObject(objectId: string): ActionDef[] {
+    const s = this.state;
+    return s ? this.content.actions.filter((a) => a.object === objectId && !a.auto && this.shown(s, a.id)) : [];
+  }
+
+  /** 做不了：小人头上冒一句为什么。说不出原因就不说。暂停时世界不动，也不说话。 */
+  private explain(candidates: readonly ActionDef[]): void {
+    const s = this.state;
+    if (!s || this.paused) return;
+    const mood = this.content.moodWhy ?? (() => '');
+    const t = whyNot(s, this.content.actions, candidates, mood);
+    if (!t) return;
+    this.bubble.textContent = t;
+    this.bubble.hidden = false;
+    this.bubble.classList.remove('pop');
+    void this.bubble.offsetWidth;
+    this.bubble.classList.add('pop');
+    this.placeBubble();
+    clearTimeout(this.bubbleTimer);
+    this.bubbleTimer = window.setTimeout(() => {
+      this.bubble.hidden = true;
+    }, 2400);
+  }
+
+  /** 话冒在头顶上，跟着人走；贴边时往里收，不出房间。 */
+  private placeBubble(): void {
+    if (this.bubble.hidden) return;
+    const box = this.room.getBoundingClientRect();
+    const h = this.head.getBoundingClientRect();
+    const half = this.bubble.offsetWidth / 2;
+    const x = Math.min(box.width - half - 6, Math.max(half + 6, h.left + h.width / 2 - box.left));
+    this.bubble.style.left = `${x}px`;
+    this.bubble.style.top = `${Math.max(this.bubble.offsetHeight + 16, h.top - box.top)}px`;
   }
 
   private dismiss(): void {
@@ -392,7 +474,9 @@ export class Scene {
         entry.kind === 'stop'
           ? ''
           : [
-              ...Object.entries(barPreview(s, a)).map(([id, d]) => `${names.get(id) ?? id}${d > 0 ? '↑' : '↓'}`),
+              ...Object.entries(barPreview(s, a, PREVIEW_STEPS)).map(
+                ([id, d]) => `${names.get(id) ?? id}${(d > 0 ? '↑' : '↓').repeat(Math.abs(d))}`,
+              ),
               a.minutes ? `${a.minutes} 分钟` : '',
             ]
               .filter(Boolean)
@@ -421,10 +505,13 @@ export class Scene {
     this.menu.hidden = true;
   }
 
-  /** 凑近看一样东西，或者拿起手机（再点一下手机就放下）。凑近别的东西时，没固定的手机先放下。 */
+  /** 凑近看一样东西，或者拿出手机（再点一下就放回去，固定着的也一样）。凑近别的东西时，没固定的手机先放下。 */
   openView(kind: 'closeup' | 'screen', id: string): void {
     if (kind === 'screen') {
-      if (this.phoneOpen) return this.putDownPhone();
+      if (this.phoneOpen) {
+        this.phonePinned = false;
+        return this.putDownPhone();
+      }
       this.phoneOpen = true;
       this.lastPhoneKey = '';
       return;
@@ -523,14 +610,14 @@ export class Scene {
   }
 
   /**
-   * 泡面近景：桌上这一桶是主角。封着、撕开、料包和叉子摆在旁边、冲上热水、盖上盖子用叉子压住、揭开。
+   * 泡面近景：桌上这一桶是主角。封着、撕开、料包和叉子摆在旁边、冲上热水、盖上盖子用叉子压住、揭开（又敞着了）。
    * 右边只列现在能做的步骤；料包也可以直接点。
    */
   private renderNoodle(s: GameState): void {
     const st = stage(s);
     if (st === 0) return this.closeCloseup();
     const acts = this.doable(s, 'table');
-    const q = st === 6 ? quality(s) : -1;
+    const q = st === 4 ? quality(s) : -1;
     const needHot = st === 3 && !hotSource(s, NOODLES.water);
     const key = `noodle|${st}|${PACKETS.map((p) => n(s, p.id)).join('')}|${acts.map((a) => a.id).join()}|${q}|${needHot}`;
     if (key !== this.lastViewKey) {
@@ -542,7 +629,7 @@ export class Scene {
       }).join('');
       const note = needHot
         ? '要冲热水才能泡。'
-        : st === 6
+        : st === 4
           ? ['面还硬着。', '泡好了。', '面泡坨了。'][q]
           : '';
       const flecks = PACKETS.filter((p) => n(s, p.id)).map((p) => p.id).join(' ');
@@ -624,10 +711,10 @@ export class Scene {
     this.skillsEl.dataset.count = String(rows.length);
     this.skillsEl.innerHTML = rows
       .map((r) => {
-        const cls = ['sk', r.done ? 'learned' : 'learning', r.running ? 'running' : '', r.isNew ? 'new' : ''].join(' ');
+        const cls = ['sk', r.done ? 'learned' : 'learning', r.running ? 'running' : '', r.isNew ? 'new' : '', r.blocked ? 'blocked' : ''].join(' ');
         const sub = r.done ? (r.running ? '做着呢' : '自动') : `${r.p.have}/${r.p.need}`;
         const bar = r.done ? '' : `<i class="sk-bar" style="--p:${r.p.have / r.p.need}"></i>`;
-        return `<button type="button" class="${cls}" data-skill="${r.k.id}" ${r.blocked ? 'disabled' : ''}><b>${esc(r.k.name)}</b><small>${sub}</small>${bar}</button>`;
+        return `<button type="button" class="${cls}" data-skill="${r.k.id}" aria-disabled="${r.blocked}"><b>${esc(r.k.name)}</b><small>${sub}</small>${bar}</button>`;
       })
       .join('');
     this.renderSkillPanel(s);
@@ -743,12 +830,17 @@ export class Scene {
 
   render(s: GameState, paused: boolean, fastForward: boolean, ended: string | null, picking = false): void {
     this.state = s;
+    this.paused = paused;
     this.renderWho(s, picking);
     const now = performance.now();
     this.city.draw(s.t, now);
     this.winTime.textContent = hm(s.t);
     const day = daylight(s.t);
-    this.room.style.setProperty('--lit', (1 - 0.42 * (1 - day)).toFixed(3));
+    // 开着灯，夜里也亮堂，只是比白天暖一点；白天开灯看不太出来。
+    const lamp = lampOn(s);
+    this.room.style.setProperty('--lit', (1 - 0.42 * (1 - day) * (lamp ? 0.2 : 1)).toFixed(3));
+    this.room.style.setProperty('--lamp', lamp ? (1 - 0.8 * day).toFixed(3) : '0');
+    this.room.classList.toggle('lamp-on', lamp);
     this.sunPatch.style.opacity = String(0.22 * day);
 
     // 物件始终在场：能用时上色，不能用时灰。
@@ -756,8 +848,15 @@ export class Scene {
       const el = this.objs.get(o.id)!;
       el.classList.toggle('available', objectAvailable(s, this.content.actions, o.id, !!o.peek));
     }
-    const unread = MESSAGES.some((m) => s.flags[`msg:${m.id}`] && !s.flags[`replied:${m.id}`]);
-    this.objs.get('phone')?.classList.toggle('ping', unread && !s.ongoing?.occupies);
+    // 身上的东西：睡着时拿不出来；来了消息，手机亮起来，角上是没回的条数。
+    const unread = MESSAGES.filter((m) => s.flags[`msg:${m.id}`] && !s.flags[`replied:${m.id}`]).length;
+    for (const [id, b] of this.pockets) {
+      b.hidden = !carrying(s, id);
+      b.classList.toggle('off', !objectAvailable(s, this.content.actions, id, true));
+      b.classList.toggle('ping', id === 'phone' && unread > 0 && !s.ongoing?.occupies);
+      b.classList.toggle('open', id === 'phone' && this.phoneOpen && !s.ongoing?.occupies);
+      b.querySelector('b')!.textContent = id === 'phone' && unread ? String(unread) : '';
+    }
 
     // 桌上的那桶面：封着、撕开、泡着（盖着冒气）、揭开；正在吃时也在。
     const cur = s.ongoing ? this.actions.get(s.ongoing.actionId) : undefined;
@@ -798,6 +897,7 @@ export class Scene {
     this.closeup.classList.toggle('beside-phone', phoneShown);
     this.phone.hidden = !phoneShown;
 
+    this.placeBubble();
     this.noticeProgress(s, now);
     this.renderSkills(s, now);
 
@@ -809,6 +909,14 @@ export class Scene {
       if (style) {
         v.track.style.height = `${style.thickness}px`;
         v.fill.style.background = style.color;
+      }
+      const growing = b.levels ? (s.levels[b.id] ?? 0) - lv(s, b.id) : 0;
+      v.base.classList.toggle('on', growing > 0.005 && lv(s, b.id) < b.levels!.max);
+      if (growing > 0.005) {
+        v.base.style.setProperty('--grow', growing.toFixed(3));
+        // 细线用下一级的颜色：攒满了条就变成这个颜色。
+        const next = b.levels?.styles?.[lv(s, b.id) + 1];
+        if (next) v.base.style.setProperty('--grow-color', next.color);
       }
     }
 
