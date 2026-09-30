@@ -4,7 +4,7 @@
 
 import type { RevealRule } from '../core/reveal';
 import { moodLv } from '../core/rules';
-import { learned } from './skills';
+import { SKILLS } from './skills';
 
 export const REVEALS: readonly RevealRule[] = [
   {
@@ -29,27 +29,19 @@ export const REVEALS: readonly RevealRule[] = [
     firstLine: '口渴了。',
   },
   {
-    // 心情不会一直显示：接近升级或降级时浮现，变化过去后淡出。
-    id: 'bar:mood',
-    showWhen: (s) => s.bars.mood >= 75 || (moodLv(s) > 0 && s.bars.mood <= 25),
-    hideWhen: (s) => s.bars.mood > 30 && s.bars.mood < 70,
-    holdMinutes: 120,
-  },
-  {
     // 体能不会一直显示：透支或攒满、接近变级时浮现。
     id: 'bar:fitness',
     showWhen: (s) => s.bars.fitness <= 25 || s.bars.fitness >= 85,
     hideWhen: (s) => s.bars.fitness > 30 && s.bars.fitness < 80,
     holdMinutes: 120,
   },
-  // 手动做成功够次数（data/skills），就会了：出现「自动」。会了就一直会。
-  { id: 'act:auto-boil', showWhen: (s) => learned(s, 'boil') },
-  { id: 'act:auto-noodles', showWhen: (s) => learned(s, 'soak') },
+  // 技能栏：第一次做这件事时出现它的按钮，之后一直留着（学会之前点它看要怎样才算会）。
+  ...SKILLS.map((k): RevealRule => ({ id: `act:${k.auto}`, showWhen: k.seenWhen })),
   // 升到 lv1 后浮现的新动作。发现后一直留着。
   { id: 'act:unpack', showWhen: (s) => moodLv(s) >= 1 },
   // 睡眠跳过依赖可失去的条件：掉回 lv0 就消失。
   { id: 'act:sleep-skip', showWhen: (s) => moodLv(s) >= 1, hideWhen: (s) => moodLv(s) < 1 },
 ];
 
-/** 开局即可见的元素。 */
-export const REVEALED_AT_START: readonly string[] = [];
+/** 开局即可见的元素。心情是主线，一开始就在，一直显示。 */
+export const REVEALED_AT_START: readonly string[] = ['bar:mood'];

@@ -4,6 +4,7 @@
 import type { GameState } from './state';
 import type { ActionDef, CueDef, Effect, Predicate } from './rules';
 import type { RevealRule } from './reveal';
+import type { SkillDef } from './skills';
 import { applyEffect, startAction, stepCues, stepOngoing } from './rules';
 import { stepReveal } from './reveal';
 import { stepRecord } from './record';
@@ -54,7 +55,10 @@ export interface ProcessDef {
   step: (s: GameState) => void;
 }
 
-/** 亲手做事的一点满足感：非自动的行动开始时生效，同一件事隔一段时间才再给一次。 */
+/**
+ * 亲手做事的一点满足感：非自动的行动开始时生效。
+ * 同一个物件上的事隔一段时间才再给一次：泡一桶面要好几步，也只算一次，不能靠反复点来刷。
+ */
 export interface ManualBonus {
   effect: Effect;
   cooldownMin: number;
@@ -68,6 +72,7 @@ export interface Content {
   cues?: readonly CueDef[];
   processes?: readonly ProcessDef[];
   manualBonus?: ManualBonus;
+  skills?: readonly SkillDef[];
 }
 
 /** 玩家发起一件事：开始它，手动做的再给一点心情。 */
@@ -75,9 +80,9 @@ export function perform(s: GameState, c: Content, a: ActionDef): void {
   startAction(s, a);
   const b = c.manualBonus;
   if (!b || a.auto) return;
-  const last = s.cooldowns[a.id];
+  const last = s.cooldowns[a.object];
   if (last !== undefined && s.t - last < b.cooldownMin) return;
-  s.cooldowns[a.id] = s.t;
+  s.cooldowns[a.object] = s.t;
   applyEffect(s, b.effect);
 }
 

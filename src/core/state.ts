@@ -46,7 +46,7 @@ export interface GameState {
   flags: Record<string, true>;
   /** 物件自己的状态（水壶里的水和温度、桌上泡着的面……），键是「物件.属性」。 */
   things: Record<string, number>;
-  /** 各行动上一次给「手动」心情的时间，防止反复点同一件事刷心情。 */
+  /** 各物件上一次给「手动」心情的时间，防止反复点同一件事刷心情。 */
   cooldowns: Record<string, number>;
   ongoing: Ongoing | null;
   reveal: RevealState;

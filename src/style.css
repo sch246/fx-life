@@ -68,6 +68,7 @@ html, body {
   position: absolute;
   inset: 72% 0 0 0;
   background: linear-gradient(var(--floor-edge) 0 3px, var(--floor) 3px);
+  cursor: pointer;
 }
 /* 白天窗户在地上投下的一块光。 */
 .sun-patch {
@@ -162,9 +163,9 @@ html, body {
   border-radius: 3px 3px 0 0;
 }
 
-.obj-phone { z-index: 3; border-radius: 3px; background: #262b34; box-shadow: inset 0 0 0 1px #11141a; }
+.obj-phone { z-index: 6; border-radius: 3px; background: #262b34; box-shadow: inset 0 0 0 1px #11141a; }
 .obj-phone.available { background: #3a4150; }
-.obj-phone.ping { z-index: 5; background: #d6e7ff; box-shadow: 0 0 12px #9cc3ff; animation: ping 1.6s ease-in-out infinite; }
+.obj-phone.ping { background: #d6e7ff; box-shadow: 0 0 12px #9cc3ff; animation: ping 1.6s ease-in-out infinite; }
 @keyframes ping { 50% { box-shadow: 0 0 3px #9cc3ff; } }
 
 .obj-kettle {
@@ -173,17 +174,6 @@ html, body {
 }
 .obj-kettle::before { content: ''; position: absolute; left: 25%; top: -16%; width: 50%; height: 22%; border: 3px solid #555a62; border-bottom: 0; border-radius: 8px 8px 0 0; }
 .obj-kettle::after { content: ''; position: absolute; right: -32%; top: 30%; width: 40%; height: 12%; background: #aeb3bb; transform: rotate(-30deg); border-radius: 3px; }
-.held-cup {
-  position: absolute;
-  left: 45.5%;
-  top: 57.5%;
-  width: 2.4%;
-  height: 4.5%;
-  background: linear-gradient(#f3efe6 0 22%, #c8412f 22% 70%, #f3efe6 70%);
-  border-radius: 2px 2px 4px 4px;
-  z-index: 3;
-}
-
 .obj-bag {
   border-radius: 8px;
   background:
@@ -225,17 +215,20 @@ html, body {
   pointer-events: none;
   z-index: 3;
 }
-.soak-cup {
+/* 桌上的那桶面：封着、撕开、盖着泡（冒气）、揭开。 */
+.table-cup {
   position: absolute;
-  left: 45.2%;
-  top: 57.2%;
+  left: 45.4%;
+  top: 57.4%;
   width: 2.6%;
   height: 4.8%;
-  background: linear-gradient(#e9dcc2 0 20%, #c8412f 20% 70%, #f3efe6 70%);
+  background: linear-gradient(#f3efe6 0 20%, #c8412f 20% 70%, #f3efe6 70%);
   border-radius: 2px 2px 4px 4px;
   z-index: 3;
   pointer-events: none;
 }
+.table-cup .film { position: absolute; left: -6%; right: -6%; top: -8%; height: 18%; border-radius: 50%; background: #f3efe6; transform-origin: 50% 100%; transition: transform 0.4s; }
+.table-cup:not([data-stage="1"]):not([data-stage="5"]) .film { transform: translate(-30%, -60%) rotate(-50deg); }
 .kettle-fx { --heat: 0; position: absolute; left: 39.5%; top: 55.5%; width: 4.5%; height: 7%; pointer-events: none; z-index: 5; }
 .kettle-fx .glow { position: absolute; inset: 30% 10% 5%; border-radius: 40%; background: radial-gradient(#ff5a3c, transparent 70%); opacity: calc(var(--heat) * 0.8); }
 .steam {
@@ -248,9 +241,8 @@ html, body {
   opacity: 0;
   filter: blur(2px);
 }
-.kettle-fx.steaming .steam, .soak-cup .steam { animation: steam 2.2s ease-out infinite; }
+.kettle-fx.steaming .steam, .table-cup.hot .steam { animation: steam 2.2s ease-out infinite; }
 @keyframes steam { 0% { opacity: 0; transform: translateY(20%) scaleX(0.7); } 40% { opacity: 1; } 100% { opacity: 0; transform: translateY(-60%) scaleX(1.3); } }
-.character[data-pose="kettle"] { left: 34%; top: 43%; }
 
 /* 水壶近景：左边是水壶，右边是能做的事。 */
 .kv { width: min(100%, 640px); height: 86%; display: grid; grid-template-columns: 1.2fr 1fr; gap: 6%; align-items: center; }
@@ -292,13 +284,21 @@ html, body {
 .kv-btn:hover:not(:disabled) { background: #343842; }
 .kv-btn:disabled { color: #5d5b57; cursor: default; }
 .kv-btn.auto { border-color: #5a7a5f; }
-@media (max-width: 520px) { .kv { grid-template-columns: 1fr; height: auto; } .kv-kettle { height: 34vw; } }
+/* 手机宽度：房间很矮，近景左右两栏都缩小，右边的步骤可以滚动。 */
+@media (max-width: 520px) {
+  .closeup { padding: 2% 3%; }
+  .kv { width: 100%; height: 100%; grid-template-columns: 0.8fr 1.2fr; gap: 3%; }
+  .kv-kettle, .nv-scene { height: auto; width: 100%; }
+  .kv-side { gap: 4px; max-height: 100%; overflow-y: auto; align-content: start; padding-top: 4px; }
+  .kv-btn, .cu-close { padding: 4px 8px; font-size: 12px; }
+  .nv-note { font-size: 12px; }
+}
 
 /* ---------- 角色 ---------- */
 
 .character {
   position: absolute;
-  left: 51.5%;
+  left: var(--x, 51.5%);
   top: 43%;
   width: 5%;
   height: 29%;
@@ -331,9 +331,10 @@ html, body {
 .character[data-pose="lie"],
 .character[data-pose="sleep"] { left: 13%; top: 45%; transform: rotate(-90deg); }
 .character[data-pose="sleep"] { filter: brightness(0.7); }
-.character[data-pose="look"] { left: 62%; top: 42%; }
-.character[data-pose="eat"] { left: 33%; top: 44%; }
-.character[data-pose="phone"] { left: 30%; top: 43%; }
+.character[data-pose="look"] { top: 42%; }
+.character[data-pose="eat"] { top: 44%; }
+.character[data-pose="phone"] .head { transform: translateY(10%); }
+.character .head { transition: transform 0.4s; }
 
 /* ---------- 菜单、状态、近景、手机 ---------- */
 
@@ -437,8 +438,25 @@ button.clothes:disabled { filter: grayscale(1) brightness(0.6); cursor: default;
   position: relative;
 }
 .cup i { position: absolute; left: 20%; right: 20%; top: 34%; height: 18%; border-radius: 3px; background: #f5d36b; }
-.cup:hover:not(:disabled) { transform: translateY(-4px); }
-.cup:disabled { cursor: default; filter: brightness(0.7); }
+.cup:hover { transform: translateY(-4px); }
+/* 鼠标移上去时，东西上方显示它是什么。 */
+.tip {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  transform: translate(-50%, -4px);
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(15, 16, 20, 0.9);
+  color: var(--ink);
+  font-size: 12px;
+  font-style: normal;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+:hover > .tip, :focus-visible > .tip { opacity: 1; }
 .cu-note { margin: 0; color: var(--ink-dim); font-size: 13px; }
 .cu-close, .ph-down {
   background: transparent;
@@ -537,6 +555,177 @@ button.clothes:disabled { filter: grayscale(1) brightness(0.6); cursor: default;
   padding: 6px 14px;
   cursor: pointer;
 }
+
+/* ---------- 技能栏：第一次做某件事时出现，学会后一点就自动做 ---------- */
+
+.skills {
+  position: absolute;
+  left: 2%;
+  top: 4%;
+  z-index: 11;
+  display: grid;
+  gap: 6px;
+}
+.sk {
+  position: relative;
+  min-width: 64px;
+  padding: 6px 10px 8px;
+  display: grid;
+  gap: 1px;
+  justify-items: start;
+  background: rgba(23, 24, 29, 0.78);
+  color: var(--ink);
+  border: 1px dashed #5d6068;
+  border-radius: 8px;
+  font: inherit;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.4s, box-shadow 0.4s, opacity 0.4s;
+}
+.sk b { font-size: 14px; font-weight: 600; }
+.sk small { font-size: 11px; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+.sk-bar { position: absolute; left: 0; bottom: 0; height: 3px; width: calc(var(--p) * 100%); background: #e0b457; transition: width 0.6s; }
+.sk.learned { border: 1px solid #e0b457; box-shadow: 0 0 10px rgba(224, 180, 87, 0.35); }
+.sk.learned small { color: #e0b457; }
+.sk.learned:hover:not(:disabled) { background: rgba(60, 50, 30, 0.85); }
+.sk.running { animation: sk-breathe 1.6s ease-in-out infinite; }
+.sk:disabled { opacity: 0.45; cursor: default; box-shadow: none; }
+.sk.new { animation: sk-new 0.9s ease-in-out 4; }
+@keyframes sk-breathe { 50% { box-shadow: 0 0 18px rgba(224, 180, 87, 0.7); } }
+@keyframes sk-new { 50% { transform: scale(1.12); box-shadow: 0 0 16px rgba(156, 195, 255, 0.8); } }
+
+.skill-panel {
+  position: absolute;
+  left: 2%;
+  top: calc(4% + 56px);
+  z-index: 12;
+  width: min(280px, 70%);
+  padding: 10px 12px;
+  background: rgba(27, 29, 34, 0.96);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.skill-panel ul { list-style: none; margin: 6px 0; padding: 0; display: grid; gap: 4px; }
+.skill-panel li { display: flex; justify-content: space-between; gap: 10px; color: var(--ink); }
+.skill-panel li.ok { color: #8fb3a0; }
+.skill-panel em { font-style: normal; color: #e0b457; font-variant-numeric: tabular-nums; }
+.skill-panel p { margin: 0; color: var(--ink-dim); font-size: 12px; }
+
+.toast {
+  position: absolute;
+  left: 50%;
+  top: 6%;
+  z-index: 11;
+  transform: translate(-50%, -8px);
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(40, 36, 24, 0.92);
+  border: 1px solid #e0b457;
+  color: #f1dca6;
+  font-size: 14px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s, transform 0.3s;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* 学会了：礼花和一张卡片。 */
+.cheer { position: absolute; inset: 0; z-index: 13; pointer-events: none; display: grid; place-items: center; overflow: hidden; }
+.cheer-card {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  padding: 18px 28px;
+  border-radius: 14px;
+  background: rgba(30, 26, 18, 0.94);
+  border: 2px solid #e0b457;
+  box-shadow: 0 0 40px rgba(224, 180, 87, 0.5);
+  transform: scale(0.6);
+  opacity: 0;
+}
+.cheer-card b { font-size: 28px; color: #f5d36b; letter-spacing: 2px; }
+.cheer-card b::before { content: '【'; }
+.cheer-card b::after { content: '】'; }
+.cheer-card span { font-size: 13px; color: #d8c9a4; }
+.cheer.go .cheer-card { animation: cheer-card 3.6s ease forwards; }
+.confetti { position: absolute; inset: 0; }
+.confetti i { position: absolute; top: -4%; width: 8px; height: 12px; border-radius: 2px; opacity: 0; }
+.cheer.go .confetti i { animation: confetti 2.8s ease-in forwards; }
+@keyframes cheer-card {
+  0% { transform: scale(0.6); opacity: 0; }
+  10% { transform: scale(1.08); opacity: 1; }
+  16%, 82% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.96); opacity: 0; }
+}
+@keyframes confetti {
+  0% { opacity: 1; transform: translateY(0) rotate(0); }
+  100% { opacity: 0.2; transform: translateY(105vh) rotate(calc(var(--r) * 3)); }
+}
+
+/* ---------- 泡面近景：桌上这一桶是主角 ---------- */
+
+.nv-note { margin: 0 0 4px; min-height: 1.4em; color: var(--ink); font-size: 15px; display: grid; gap: 2px; }
+.nv-note small { color: var(--ink-dim); font-size: 12px; font-variant-numeric: tabular-nums; }
+.nv-scene { position: relative; height: 80%; aspect-ratio: 1; max-width: 100%; justify-self: center; }
+.nv-table { position: absolute; left: -6%; right: -6%; bottom: 0; height: 22%; border-radius: 6px; background: linear-gradient(#7a5c40 0 18%, #5a432e 18%); }
+.nv-cup {
+  position: absolute;
+  left: 28%;
+  width: 44%;
+  bottom: 16%;
+  height: 50%;
+  clip-path: polygon(0 0, 100% 0, 88% 100%, 12% 100%);
+  background: linear-gradient(#f3efe6 0 14%, #c8412f 14% 74%, #f3efe6 74%);
+}
+.nv-label { position: absolute; left: 36%; top: 30%; width: 28%; height: 30%; display: grid; place-items: center; border-radius: 50%; background: #f5d36b; color: #7a2a1e; font-style: normal; font-weight: 700; font-size: clamp(14px, 3vw, 26px); }
+.nv-rim { position: absolute; left: 27%; width: 46%; top: 29%; height: 10%; border-radius: 50%; background: #efe6d4; box-shadow: inset 0 0 0 3px #f7f2e8; overflow: hidden; }
+.nv-in { position: absolute; inset: 14% 5% 8%; border-radius: 50%; background: #cfa24e; opacity: 0; transition: opacity 0.4s, background 0.6s; }
+/* 面饼：撕开以后看得见。 */
+.nv-scene:not([data-stage="1"]) .nv-in { opacity: 1; background: repeating-linear-gradient(60deg, #e8c46c 0 4px, #d8ad55 4px 8px); }
+/* 料包放进去：酱色、菜叶。 */
+.nv-in.sauce { box-shadow: inset 0 0 0 40px rgba(120, 60, 30, 0.35); }
+.nv-in.veg::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle, #6aa35a 22%, transparent 26%) 0 0 / 22% 60%, radial-gradient(circle, #d24a35 18%, transparent 22%) 30% 20% / 30% 70%; }
+/* 冲上水：面饼泡在汤里。 */
+.nv-scene[data-stage="4"] .nv-in,
+.nv-scene[data-stage="6"] .nv-in { background: radial-gradient(ellipse, rgba(214, 150, 70, 0.75), rgba(150, 90, 40, 0.85)), repeating-linear-gradient(60deg, #e8c46c 0 4px, #d8ad55 4px 8px); }
+.nv-scene[data-q="1"] .nv-in { background: radial-gradient(ellipse, rgba(220, 150, 70, 0.55), rgba(160, 90, 40, 0.8)), repeating-radial-gradient(circle at 30% 50%, #f1d27a 0 3px, #d7ae57 3px 6px); }
+.nv-scene[data-q="2"] .nv-in { background: repeating-radial-gradient(circle at 40% 50%, #efe0b2 0 6px, #d9c48d 6px 11px); }
+/* 盖子：封着、撕开翻到后面、盖回去。 */
+.nv-film {
+  position: absolute;
+  left: 26%;
+  width: 48%;
+  top: 28.5%;
+  height: 11%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, #f7f2e8 55%, #c8412f 56% 64%, #f7f2e8 65%);
+  transform-origin: 50% 0;
+  transition: transform 0.5s ease;
+}
+.nv-cup { z-index: 1; }
+.nv-rim { z-index: 2; }
+.nv-film { z-index: 3; }
+.nv-fork { z-index: 4; }
+/* 撕开的盖子翻起来，立在桶后面。 */
+.nv-scene:not([data-stage="1"]):not([data-stage="5"]) .nv-film { z-index: 0; transform: translateY(-62%) scaleY(1.7) rotate(-5deg); clip-path: inset(0 0 45% 0); filter: brightness(0.9); }
+.nv-fork { position: absolute; width: 5%; height: 26%; left: 78%; bottom: 16%; border-radius: 3px; background: linear-gradient(#f4f4f4 0 30%, #e3e3e3 30%); transform: rotate(14deg); opacity: 0; transition: all 0.5s ease; }
+.nv-fork::before { content: ''; position: absolute; left: -20%; right: -20%; top: -18%; height: 22%; background: repeating-linear-gradient(90deg, #f4f4f4 0 18%, transparent 18% 27%); }
+.nv-scene[data-stage="3"] .nv-fork,
+.nv-scene[data-stage="4"] .nv-fork,
+.nv-scene[data-stage="6"] .nv-fork { opacity: 1; }
+/* 盖上盖子，用叉子压住。 */
+.nv-scene[data-stage="5"] .nv-fork { opacity: 1; left: 47%; bottom: 58%; transform: rotate(80deg); }
+.nv-steam { position: absolute; left: 34%; width: 32%; top: 2%; height: 26%; opacity: 0; background: radial-gradient(ellipse at 50% 90%, rgba(245, 245, 245, 0.6), transparent 65%); filter: blur(4px); }
+.nv-scene.hot .nv-steam { animation: steam 2s ease-out infinite; }
+.nv-packets { position: absolute; left: 0; bottom: 18%; width: 26%; height: 22%; display: flex; flex-wrap: wrap; gap: 6%; align-content: flex-end; }
+.nv-pk { position: relative; width: 44%; height: 42%; border: 0; border-radius: 3px; cursor: pointer; padding: 0; }
+.nv-pk.sauce { background: linear-gradient(135deg, #8a4a24, #b8652d); }
+.nv-pk.salt { background: linear-gradient(135deg, #e6e2da, #c9c3b8); }
+.nv-pk.veg { background: linear-gradient(135deg, #4f8a45, #78b060); }
+.nv-pk:hover:not(:disabled) { transform: translateY(-3px); }
+.nv-pk:disabled { cursor: default; }
 
 /* ---------- 状态条：淡入淡出 ---------- */
 

@@ -18,3 +18,7 @@ export const roomLight = (s: GameState, r: RoomDef = ROOM) => daylight(s.t) * (1
 
 /** 睡眠质量：光和声都会让人睡不沉。 */
 export const sleepQuality = (s: GameState, r: RoomDef = ROOM) => Math.max(0.2, 1 - 0.5 * roomLight(s, r) - r.noise);
+
+/** 躺下多久才睡着：安静、黑的房间里十分钟左右，光和声会让人更久睡不着。 */
+export const FALL_ASLEEP_MIN = 10;
+export const fallAsleepMin = (s: GameState, r: RoomDef = ROOM) => FALL_ASLEEP_MIN / sleepQuality(s, r);

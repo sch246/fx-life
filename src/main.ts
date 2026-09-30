@@ -18,21 +18,24 @@ let endedText: string | null = null;
 const gated = new Set(CONTENT.reveals.map((r) => r.id));
 const actionVisible = (id: string) => !gated.has(`act:${id}`) || isVisible(state, `act:${id}`);
 
-function begin(a: ActionDef): void {
-  if (clock.paused || blockedReason(state, a) !== null) return;
+// 暂停时可以查看，不能行动。
+function begin(a: ActionDef): boolean {
+  if (clock.paused || blockedReason(state, a) !== null) return false;
   clock.interrupt();
   perform(state, CONTENT, a);
   if (a.skip) clock.setFastForward(true);
+  return true;
+}
+
+function stop(): void {
+  if (clock.paused || !state.ongoing) return;
+  clock.interrupt();
+  stopOngoing(state);
 }
 
 function choose(entry: MenuEntry): void {
-  if (clock.paused || !entry.enabled) return;
-  if (entry.kind === 'stop') {
-    clock.interrupt();
-    stopOngoing(state);
-    return;
-  }
-  begin(entry.action);
+  if (entry.kind === 'stop') stop();
+  else begin(entry.action);
 }
 
 const scene = new Scene(document.getElementById('app')!, CONTENT, OBJECTS, {
@@ -40,25 +43,31 @@ const scene = new Scene(document.getElementById('app')!, CONTENT, OBJECTS, {
     if (!endedText) clock.setPaused(!clock.paused);
   },
   clickObject: (id) => {
-    // 暂停时可以查看，不能行动。点物件只是打开它，不直接替玩家做事。
+    // 点物件只是打开它，不直接替玩家做事。
     if (clock.paused) return;
     const obj = OBJECTS.find((o) => o.id === id)!;
     const view = obj.view ?? 'menu';
     if (view !== 'menu') {
-      if (objectAvailable(state, CONTENT.actions, id, true)) scene.openView(view, id);
+      if (objectAvailable(state, CONTENT.actions, id, !!obj.peek)) scene.openView(view, id);
       return;
     }
     scene.closeView();
-    scene.showMenu(id, objectMenu(state, CONTENT.actions, id, actionVisible));
+    scene.showMenu(id, objectMenu(state, CONTENT.actions, id, actionVisible), state);
   },
   chooseEntry: choose,
   doAction: (id) => {
     const a = CONTENT.actions.find((x) => x.id === id);
-    if (!a) return;
-    begin(a);
-    // 在近景里开始一件要占住人的事（整理行李、守着水壶），就合上近景去做。
-    const view = OBJECTS.find((o) => o.id === a.object)?.view;
-    if (view === 'closeup' && state.ongoing?.actionId === a.id && ((a.minutes ?? 0) > 1 || a.auto)) scene.closeView();
+    if (!a || !begin(a)) return false;
+    // 在近景里开始一件要花一阵子的事（吃面、整理行李），或者让小人自动去做，就合上近景去做。
+    if (state.ongoing?.actionId === a.id && ((a.minutes ?? 0) > 1 || a.auto)) scene.closeView();
+    return true;
+  },
+  stop,
+  walk: () => {
+    // 起身走开会停下正在做的事（躺着、看窗外……）；睡着时走不了。
+    if (clock.paused || state.ongoing?.occupies) return false;
+    if (state.ongoing) stop();
+    return true;
   },
   restart: () => location.reload(),
 });
