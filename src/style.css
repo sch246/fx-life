@@ -171,9 +171,61 @@ html, body {
   border-radius: 3px 3px 0 0;
 }
 
-.obj-phone { border-radius: 3px; background: #262b34; box-shadow: inset 0 0 0 1px #11141a; }
-.obj-phone.available { background: #3a4150; }
-.obj-phone.ping { filter: none; background: #d6e7ff; box-shadow: 0 0 12px #9cc3ff; animation: ping 1.6s ease-in-out infinite; }
+/* 屋顶垂下来的灯泡：电线、灯座、灯泡，一根拉线垂到手够得着的地方。 */
+.obj-lamp {
+  background:
+    radial-gradient(circle, #9a8a6c 0 55%, transparent 60%) 62% 100% / 8px 8px no-repeat,
+    linear-gradient(#a79c88, #a79c88) 62% 90% / 1px 68% no-repeat,
+    linear-gradient(#2b2c30, #2b2c30) 50% 19.5% / 8px 3.5% no-repeat;
+}
+.obj-lamp::before { content: ''; position: absolute; left: calc(50% - 1px); top: 0; width: 2px; height: 20%; background: #1d1e22; }
+.obj-lamp::after { content: ''; position: absolute; left: 26%; top: 22%; width: 48%; aspect-ratio: 1 / 1.15; border-radius: 50% 50% 46% 46%; background: #d9d4c7; box-shadow: inset -3px -3px 0 rgba(0, 0, 0, 0.12); }
+/* 灯亮着：灯泡本身发光（不跟着房间变暗），整间屋子罩上一层暖黄。 */
+.lamp-glow {
+  position: absolute;
+  left: 30.5%;
+  top: 12.8%;
+  width: 18%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, #fffaf0 0 5%, rgba(255, 226, 170, 0.75) 8%, rgba(255, 205, 140, 0.25) 26%, transparent 66%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.room.lamp-on .lamp-glow { opacity: calc(0.35 + 0.65 * var(--lamp)); }
+.lamp-light {
+  position: absolute;
+  inset: 0;
+  z-index: 900;
+  pointer-events: none;
+  background: radial-gradient(ellipse 80% 100% at 30.5% 14%, rgba(255, 200, 125, 0.9), rgba(255, 184, 108, 0.5) 50%, rgba(255, 172, 100, 0.25) 95%);
+  mix-blend-mode: soft-light;
+  opacity: var(--lamp, 0);
+  transition: opacity 0.15s;
+}
+
+/* 身上带着的东西：房间左下角一栏。手机来消息时亮起来，角上是没回的条数。 */
+.pockets { position: absolute; left: 1.5%; bottom: 3%; z-index: 960; display: flex; gap: 6px; }
+.pk {
+  position: relative;
+  width: 34px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(23, 24, 29, 0.72);
+  cursor: pointer;
+}
+.pk:hover:not(:disabled) { border-color: #6a6d76; }
+.pk:disabled { cursor: default; opacity: 0.45; }
+.pk.open { border-color: #9cc3ff; }
+.pk > i { width: 14px; height: 24px; border-radius: 3px; background: #3a4150; box-shadow: inset 0 0 0 1.5px #11141a; }
+.pk.ping > i { background: #d6e7ff; box-shadow: 0 0 10px #9cc3ff; animation: ping 1.6s ease-in-out infinite; }
+.pk > b:not(:empty) { position: absolute; top: -6px; right: -6px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: #e5484d; color: #fff; font-size: 11px; line-height: 16px; }
 @keyframes ping { 50% { box-shadow: 0 0 3px #9cc3ff; } }
 
 .obj-kettle {

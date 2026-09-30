@@ -1,11 +1,12 @@
 // 场景：房间、窗户、角色、物件、状态条、技能栏、事件流和暂停的绘制与点击。
 // 只读状态、只通过回调发出意图；不直接改状态，规则留在 core/。
 // 条的淡入淡出靠切换 .shown 类；物件常驻，靠切换 .available 类在灰与上色之间过渡。
-// 点物件只是打开它：弹出能做的事（menu），凑近看（closeup），或者在右侧拿起手机（screen）。
+// 点物件只是打开它：弹出能做的事（menu），凑近看（closeup）。身上带的东西（手机）在左下角一栏，点一下在右侧拿出来（screen）。
 // 菜单和近景里只列现在能做的事；鼠标移到物件上就弹出菜单，少点一下。
 // 近景和手机都没有「离开」按钮：点它们四周就合上。手机可以用图钉固定，固定着就一直拿在手上，边看边做别的。
 // 做物件上的事时，角色走到物件跟前；点地板，角色在地板上走过去（左右和前后）。
-// 地板上的东西按远近排前后（data/objects 的 layerOf）。夜里房间变暗是给墙、地板、物件和角色降亮度，窗外不受影响。
+// 地板上的东西按远近排前后（data/objects 的 layerOf）。夜里房间变暗是给墙、地板、物件和角色降亮度，窗外不受影响；
+// 开了灯，房间亮回来，罩上一层暖黄的光。
 // 角色站在哪只是画面，不影响规则。
 
 import type { GameState } from '../core/state';
@@ -21,12 +22,16 @@ import { MESSAGES } from '../data/messages';
 import { dispenserWater, hotSource, k, vessel } from '../data/water';
 import { NOODLES, PACKETS, heat, n, quality, soak, stage } from '../data/noodles';
 import { layerAt, layerOf, standAt, type Spot } from '../data/objects';
+import { CARRIED, carrying } from '../data/items';
+import { lampOn } from '../data/room';
 import { HAIR_COLOR, PERSON_PARTS, SKIN, outfit, pronoun } from '../data/person';
 import { CityView } from './window';
 
 export interface SceneIntents {
   togglePause(): void;
   clickObject(id: string): void;
+  /** 点了身上带的东西（手机）：拿出来，或者放回去。 */
+  openItem(id: string): void;
   chooseEntry(entry: MenuEntry): void;
   /** 在近景、屏幕或技能栏里点了某件事。开始了返回 true。 */
   doAction(actionId: string): boolean;
@@ -71,6 +76,8 @@ export class Scene {
   private readonly tableCup: HTMLButtonElement;
   private readonly kettleFx: HTMLElement;
   private readonly dispWater: HTMLElement;
+  private readonly lampGlow: HTMLElement;
+  private readonly pockets = new Map<string, HTMLButtonElement>();
   private readonly skillsEl: HTMLElement;
   private readonly skillPanel: HTMLElement;
   private readonly toast: HTMLElement;
@@ -137,8 +144,13 @@ export class Scene {
           <button type="button" class="table-cup" hidden aria-label="泡面"><i class="film"></i><i class="steam"></i><i class="gauges">${GAUGES}</i><span class="tip">泡面</span></button>
           <div class="kettle-fx"><i class="glow"></i><i class="steam"></i></div>
           <div class="disp-water"></div>
+          <div class="lamp-glow"></div>
+          <div class="lamp-light"></div>
           <div class="character" aria-hidden="true"><i class="hair-back"></i><i class="leg l"></i><i class="leg r"></i><i class="skirt"></i><i class="neck"></i><i class="torso"></i><i class="arm l"></i><i class="arm r"></i><i class="head"><i class="hair"></i><i class="eye l"></i><i class="eye r"></i><i class="cheek l"></i><i class="cheek r"></i></i><i class="held-phone"></i></div>
           <nav class="skills" aria-label="技能"></nav>
+          <nav class="pockets" aria-label="身上">${CARRIED.map(
+            (c) => `<button type="button" class="pk pk-${c.id}" data-item="${c.id}" aria-label="${esc(c.name)}"><i></i><b></b><span class="tip">${esc(c.name)}</span></button>`,
+          ).join('')}</nav>
           <div class="skill-panel" hidden></div>
           <div class="toast" aria-live="polite"></div>
           <div class="menu" role="menu" hidden></div>
@@ -172,6 +184,8 @@ export class Scene {
     this.tableCup = $('.table-cup');
     this.kettleFx = $('.kettle-fx');
     this.dispWater = $('.disp-water');
+    this.lampGlow = $('.lamp-glow');
+    for (const b of root.querySelectorAll<HTMLButtonElement>('.pk')) this.pockets.set(b.dataset.item!, b);
     this.skillsEl = $('.skills');
     this.skillPanel = $('.skill-panel');
     this.toast = $('.toast');
@@ -198,6 +212,15 @@ export class Scene {
       intents.clickObject('table');
     });
     $('.restart').addEventListener('click', () => intents.restart());
+    // 身上的东西：点一下拿出来，再点一下放回去。
+    $('.pockets').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const t = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-item]');
+      if (!t || t.disabled) return;
+      this.hideMenu();
+      this.panelSkill = null;
+      intents.openItem(t.dataset.item!);
+    });
     // 点房间里空的地方：收起菜单，放下手机。点到房间外面（页面四周、状态条、事件流），近景也合上。
     this.room.addEventListener('click', () => this.dismiss());
     document.addEventListener('click', (e) => {
@@ -300,6 +323,7 @@ export class Scene {
     this.tableCup.style.zIndex = String(layerOf('table') + 2);
     this.kettleFx.style.zIndex = String(layerOf('kettle') + 1);
     this.dispWater.style.zIndex = String(layerOf('dispenser') + 1);
+    this.lampGlow.style.zIndex = String(layerOf('lamp') + 1);
 
     const barsEl = $('.bars');
     for (const b of content.bars) {
@@ -421,10 +445,13 @@ export class Scene {
     this.menu.hidden = true;
   }
 
-  /** 凑近看一样东西，或者拿起手机（再点一下手机就放下）。凑近别的东西时，没固定的手机先放下。 */
+  /** 凑近看一样东西，或者拿出手机（再点一下就放回去，固定着的也一样）。凑近别的东西时，没固定的手机先放下。 */
   openView(kind: 'closeup' | 'screen', id: string): void {
     if (kind === 'screen') {
-      if (this.phoneOpen) return this.putDownPhone();
+      if (this.phoneOpen) {
+        this.phonePinned = false;
+        return this.putDownPhone();
+      }
       this.phoneOpen = true;
       this.lastPhoneKey = '';
       return;
@@ -748,7 +775,11 @@ export class Scene {
     this.city.draw(s.t, now);
     this.winTime.textContent = hm(s.t);
     const day = daylight(s.t);
-    this.room.style.setProperty('--lit', (1 - 0.42 * (1 - day)).toFixed(3));
+    // 开着灯，夜里也亮堂，只是比白天暖一点；白天开灯看不太出来。
+    const lamp = lampOn(s);
+    this.room.style.setProperty('--lit', (1 - 0.42 * (1 - day) * (lamp ? 0.2 : 1)).toFixed(3));
+    this.room.style.setProperty('--lamp', lamp ? (1 - 0.8 * day).toFixed(3) : '0');
+    this.room.classList.toggle('lamp-on', lamp);
     this.sunPatch.style.opacity = String(0.22 * day);
 
     // 物件始终在场：能用时上色，不能用时灰。
@@ -756,8 +787,15 @@ export class Scene {
       const el = this.objs.get(o.id)!;
       el.classList.toggle('available', objectAvailable(s, this.content.actions, o.id, !!o.peek));
     }
-    const unread = MESSAGES.some((m) => s.flags[`msg:${m.id}`] && !s.flags[`replied:${m.id}`]);
-    this.objs.get('phone')?.classList.toggle('ping', unread && !s.ongoing?.occupies);
+    // 身上的东西：睡着时拿不出来；来了消息，手机亮起来，角上是没回的条数。
+    const unread = MESSAGES.filter((m) => s.flags[`msg:${m.id}`] && !s.flags[`replied:${m.id}`]).length;
+    for (const [id, b] of this.pockets) {
+      b.hidden = !carrying(s, id);
+      b.disabled = !objectAvailable(s, this.content.actions, id, true);
+      b.classList.toggle('ping', id === 'phone' && unread > 0 && !s.ongoing?.occupies);
+      b.classList.toggle('open', id === 'phone' && this.phoneOpen && !s.ongoing?.occupies);
+      b.querySelector('b')!.textContent = id === 'phone' && unread ? String(unread) : '';
+    }
 
     // 桌上的那桶面：封着、撕开、泡着（盖着冒气）、揭开；正在吃时也在。
     const cur = s.ongoing ? this.actions.get(s.ongoing.actionId) : undefined;

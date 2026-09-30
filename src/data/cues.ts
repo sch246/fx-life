@@ -16,5 +16,5 @@ export const CUES: readonly CueDef[] = [
   ...BANDS.filter((b) => b.line).map((b): CueDef => ({ id: `band-${b.id}`, when: (s) => inBand(s, b), line: b.line })),
 ];
 
-/** 开局时行李箱里的东西。 */
-export const START_ITEMS: Record<string, number> = { noodles: 6 };
+/** 开局时有的东西：行李箱里的面，身上的手机（data/items）。 */
+export const START_ITEMS: Record<string, number> = { noodles: 6, phone: 1 };

@@ -3,7 +3,7 @@
 // 具体的行动是 data/ 里数据表的一行；这里只有解释这些行的代码。
 // 不要在这里为某个行动或某一代写特判，缺什么能力就扩展语法本身。
 
-import type { GameState } from './state';
+import type { GameState, Ongoing } from './state';
 import { say } from './feed';
 
 /** 一组量的变化。 */
@@ -79,6 +79,11 @@ export interface ActionDef {
   hands?: boolean;
   /** 自动：小人自己把这件事做完，玩家不用盯着。手动做熟之后出现在技能栏里，不在物件的菜单里。 */
   auto?: boolean;
+  /**
+   * 在另一件事上面做（睡觉是躺着时闭上眼睛）：这件事结束或被叫停（stopLabel，例如「睁眼」），
+   * 回到下面那件事（还躺着）；叫停下面那件事（「起来」）就一起停下。
+   */
+  on?: string;
   /**
    * 在后台进行：开个头（例如接水、打开开关）就不用守着，小人可以去做别的事，别的事也不会把它打断；
    * stopWhen 成立时小人顺手收尾（onEnd，例如关掉开关）。身体被占住（睡着）时收不了尾，要等醒来。
@@ -168,10 +173,13 @@ export function startAction(s: GameState, a: ActionDef): void {
   }
 }
 
+/** 这件事结束后身体回到哪里：在别的事上面做的，回到那件事；否则空下来。 */
+const after = (s: GameState, a: ActionDef): Ongoing | null => (a.on ? { actionId: a.on, start: s.t } : null);
+
 function finish(s: GameState, a: ActionDef, foreground = true): void {
   // 先按结束前的状态定下这句话（例如睡着了没有），再结束。
   const line = text(s, a.endLine);
-  if (foreground) s.ongoing = null;
+  if (foreground) s.ongoing = after(s, a);
   const end = resolve(s, a.onEnd);
   if (end) applyEffect(s, end, 1, a.reason ?? a.label, a.cat);
   if (line) say(s, line);
@@ -192,9 +200,15 @@ export function stepOngoing(s: GameState, actions: readonly ActionDef[]): void {
   if ((o.until !== undefined && s.t >= o.until) || (a.stopWhen && a.stopWhen(s))) finish(s, a);
 }
 
-/** 手动停止或被打断：持续期间已发生的变化保留，onEnd 不给。 */
+/** 手动停止或被打断：持续期间已发生的变化保留，onEnd 不给。连同它下面那件事一起停下（起身）。 */
 export function stopOngoing(s: GameState): void {
   s.ongoing = null;
+}
+
+/** 只停下正在做的这一件（睁眼）：回到它下面那件事（还躺着）。 */
+export function endOngoing(s: GameState, actions: readonly ActionDef[]): void {
+  const a = s.ongoing && actions.find((x) => x.id === s.ongoing!.actionId);
+  s.ongoing = a ? after(s, a) : null;
 }
 
 /** 推进后台的事一分钟：条件成立、身体又空着，就顺手收尾。 */
@@ -258,8 +272,11 @@ export function objectMenu(
   const out: MenuEntry[] = [];
   const cur = s.ongoing && actions.find((a) => a.id === s.ongoing!.actionId);
   if (cur && cur.object === objectId && cur.stopLabel) out.push({ kind: 'stop', action: cur });
+  // 在别的事上面做的（睡觉在躺着上面）：下面那件事的「停下」也列出来（睁眼之外还能直接起来）。
+  const base = cur?.on ? actions.find((a) => a.id === cur.on) : undefined;
+  if (base && base.object === objectId && base.stopLabel) out.push({ kind: 'stop', action: base });
   for (const a of actions) {
-    if (a.object !== objectId || a.auto || !visible(a.id) || (cur && cur.id === a.id)) continue;
+    if (a.object !== objectId || a.auto || !visible(a.id) || (cur && (cur.id === a.id || cur.on === a.id))) continue;
     if (blockedReason(s, a) === null) out.push({ kind: 'start', action: a });
   }
   return out;

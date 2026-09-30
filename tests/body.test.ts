@@ -10,6 +10,8 @@ import { perform } from '../src/core/world';
 import { at } from '../src/core/time';
 
 import { act, run } from './helpers';
+import { stopOngoing } from '../src/core/rules';
+import { roomLight } from '../src/data/room';
 
 const barIds = new Set(BARS.map((b) => b.id));
 
@@ -78,6 +80,10 @@ describe('身体模型：单一事实来源', () => {
     // 条是因为正在涨才浮现的，人并不累：「累了。」要等真的跌破 40 才说。
     expect(s.feed.some((l) => l.text === '累了。')).toBe(false);
     while (s.ongoing?.actionId === 'sleep') stepWorld(s, CONTENT);
+    // 醒了还躺着，精力还在涨，条还在；起来之后稳定一阵才淡出。
+    expect(s.ongoing?.actionId).toBe('lie');
+    expect(isVisible(s, 'bar:energy')).toBe(true);
+    stopOngoing(s);
     run(s, 40);
     expect(isVisible(s, 'bar:energy')).toBe(false);
   });
@@ -89,7 +95,7 @@ describe('身体模型：单一事实来源', () => {
     perform(s, CONTENT, act('lie'));
     perform(s, CONTENT, act('sleep'));
     stepWorld(s, CONTENT);
-    expect(s.ongoing).toBeNull();
+    expect(s.ongoing?.actionId).toBe('lie');
     expect(s.feed.some((l) => l.text === '太亮了，睡不着。')).toBe(true);
     expect(s.feed.some((l) => l.text === '醒了。')).toBe(false);
 
@@ -101,6 +107,27 @@ describe('身体模型：单一事实来源', () => {
     run(worn, 60);
     expect(worn.ongoing?.actionId).toBe('sleep');
     expect(worn.ongoing?.occupies).toBe(true);
+  });
+
+  it('夜里开着灯太亮睡不着，关了灯才睡得着', () => {
+    const s = newGame(1);
+    s.t = at(1, 23);
+    s.bars.energy = 60;
+    perform(s, CONTENT, act('lamp-on'));
+    expect(roomLight(s)).toBeGreaterThan(0.6);
+    perform(s, CONTENT, act('lie'));
+    perform(s, CONTENT, act('sleep'));
+    stepWorld(s, CONTENT);
+    expect(s.ongoing?.actionId).toBe('lie');
+    expect(s.feed.some((l) => l.text === '太亮了，睡不着。')).toBe(true);
+
+    perform(s, CONTENT, act('lamp-off'));
+    expect(roomLight(s)).toBeLessThan(0.2);
+    perform(s, CONTENT, act('lie'));
+    perform(s, CONTENT, act('sleep'));
+    run(s, 60);
+    expect(s.ongoing?.actionId).toBe('sleep');
+    expect(s.ongoing?.occupies).toBe(true);
   });
 
   it('调试快照每根条都列到', () => {

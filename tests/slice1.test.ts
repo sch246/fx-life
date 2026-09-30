@@ -10,6 +10,8 @@ import { NOODLES, heat, soak, stage } from '../src/data/noodles';
 import { SKILLS } from '../src/data/skills';
 import { CONTENT, DEMO_END_FLAG, newGame } from '../src/data';
 import { at } from '../src/core/time';
+import { OBJECTS } from '../src/data/objects';
+import { CARRIED, carrying } from '../src/data/items';
 import { act, carefulPlayer, lyingDown, run, tryDo } from './helpers';
 
 const skill = (id: string) => SKILLS.find((x) => x.id === id)!;
@@ -88,6 +90,24 @@ describe('第一片走查', () => {
     expect(objectAvailable(s, CONTENT.actions, 'window')).toBe(false);
     expect(objectAvailable(s, CONTENT.actions, 'bag', true)).toBe(false);
     expect(objectAvailable(s, CONTENT.actions, 'phone', true)).toBe(false);
+  });
+
+  it('手机带在身上，不是房间里的物件：站在哪都能拿出来回消息，睡着时拿不出来', () => {
+    const s = newGame(1);
+    expect(OBJECTS.some((o) => o.id === 'phone')).toBe(false);
+    expect(CARRIED.map((c) => c.id)).toContain('phone');
+    expect(carrying(s, 'phone')).toBe(true);
+    s.t = at(1, 19, 29);
+    run(s, 2);
+    perform(s, CONTENT, act('look'));
+    expect(tryDo(s, act('reply-arrived'))).toBe(true);
+    expect(s.ongoing?.actionId).toBe('look');
+    // 手机不在身上了（以后丢了、落在哪里），消息也就回不了。
+    const lost = newGame(1);
+    lost.items.phone = 0;
+    lost.t = at(1, 19, 31);
+    stepWorld(lost, CONTENT);
+    expect(blockedReason(lost, act('reply-arrived'))).toBe('requires');
   });
 
   it('水壶：5 分钟烧开，开着不关 30 分钟烧干，再干烧 5 分钟烧坏', () => {

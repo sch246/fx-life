@@ -9,7 +9,8 @@ import { moodLv } from '../core/rules';
 import { BODY } from './body';
 import { MESSAGES } from './messages';
 import { learned } from './skills';
-import { fallAsleepMin, roomLight, sleepQuality } from './room';
+import { fallAsleepMin, lampOn, roomLight, sleepQuality } from './room';
+import { carrying } from './items';
 import { WATER, dispenserWater, drinkBars, fill, hotSource, k, pour, vessel, w } from './water';
 import { AUTO_NOODLES, NOODLES, NOODLE_ACTIONS, stage } from './noodles';
 
@@ -36,12 +37,14 @@ const SLEEP: Omit<ActionDef, 'id' | 'label'> = {
   object: 'bed',
   temper: 'impulse',
   requires: lying,
+  // 睡觉是躺着时闭上眼睛：醒了、睡不着、睁眼，都还躺在床上；「起来」才下床。
+  on: 'lie',
   // 净增 = 这里的 14 × 睡眠质量 − 精力基线 4。夜里质量 0.9，净 +8.6/时，
   // 约八小时正好补回一天醒着消耗；白天亮着质量低，补得慢。数值由"一夜补一天"倒推。
   perHour: { bars: { energy: 14 } },
   rate: sleepQuality,
   stopWhen: wakeUp,
-  stopLabel: '起来',
+  stopLabel: '睁眼',
   // 还没睡着就被光挡回来，是睡不着；睡着了再醒，是醒了。
   endLine: (s) => (!s.ongoing?.occupies && tooBright(s) ? '太亮了，睡不着。' : '醒了。'),
   // 躺下一会儿才睡着；睡着之前还能看看手机。
@@ -58,6 +61,23 @@ export const ACTIONS: readonly ActionDef[] = [
     minutes: 10,
     perHour: { bars: { mood: 6 } },
     pose: 'look',
+  },
+  // 灯：拉一下开，再拉一下关。开着屋里亮堂，也亮得睡不着（见 data/room 的 roomLight）。
+  {
+    id: 'lamp-on',
+    object: 'lamp',
+    label: '开灯',
+    temper: 'impulse',
+    requires: (s) => !lampOn(s),
+    onStart: { set: { 'lamp.on': 1 } },
+  },
+  {
+    id: 'lamp-off',
+    object: 'lamp',
+    label: '关灯',
+    temper: 'impulse',
+    requires: lampOn,
+    onStart: { set: { 'lamp.on': 0 } },
   },
   {
     // 不在床上时，床上只有「躺下」；躺上去之后才能睡。
@@ -163,7 +183,7 @@ export const ACTIONS: readonly ActionDef[] = [
     }),
     line: (s) => (w(s, 'dispenser', 'raw') > 0.01 ? '接了一杯水喝。有股生水味。' : '接了一杯水喝。'),
   },
-  // 手机：躺着、坐着都能看，回消息只用手，不起身。
+  // 手机带在身上（data/items）：躺着、坐着都能看，回消息只用手，不起身。
   ...MESSAGES.map(
     (m): ActionDef => ({
       id: `reply-${m.id}`,
@@ -171,7 +191,7 @@ export const ACTIONS: readonly ActionDef[] = [
       label: m.reply,
       temper: 'impulse',
       hands: true,
-      requires: (s) => !!s.flags[`msg:${m.id}`] && !s.flags[`replied:${m.id}`],
+      requires: (s) => carrying(s, 'phone') && !!s.flags[`msg:${m.id}`] && !s.flags[`replied:${m.id}`],
       onStart: { flags: [`replied:${m.id}`], bars: { mood: m.mood } },
     }),
   ),
