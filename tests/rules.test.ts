@@ -9,9 +9,9 @@ const ACTIONS: ActionDef[] = [
 
 describe('物件可用', () => {
   it('需要自律的行动在心情最低时被挡住，物件变灰；心情回升后上色', () => {
-    const s = createState({ moodLv: 0 });
+    const s = createState({ levels: { mood: 0 } });
     expect(objectAvailable(s, ACTIONS, 'door')).toBe(false);
-    s.moodLv = 1;
+    s.levels.mood = 1;
     expect(objectAvailable(s, ACTIONS, 'door')).toBe(true);
   });
 

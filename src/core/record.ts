@@ -7,7 +7,7 @@ import { MIN_PER_HOUR } from './time';
 export interface Sample {
   t: number;
   bars: Record<string, number>;
-  moodLv: number;
+  levels: Record<string, number>;
   money: number;
 }
 
@@ -22,6 +22,6 @@ export const SAMPLE_EVERY_MIN = MIN_PER_HOUR;
 export function stepRecord(s: GameState): void {
   const r = s.record;
   if (s.t - r.lastSampleT < SAMPLE_EVERY_MIN) return;
-  r.samples.push({ t: s.t, bars: { ...s.bars }, moodLv: s.moodLv, money: s.money });
+  r.samples.push({ t: s.t, bars: { ...s.bars }, levels: { ...s.levels }, money: s.money });
   r.lastSampleT = s.t;
 }

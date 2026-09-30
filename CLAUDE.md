@@ -25,13 +25,14 @@ npm run build      # 输出 dist/，可直接当静态页面部署
 - `src/core/state.ts` 状态：纯数据、可序列化（存档、结算回放）。不放函数、DOM 或类实例。
 - `src/core/rules.ts` 规则：行动语法。一切行动、工作、事件都是「条、钱、时间、长期积累」的变化；钱的变化一律记账。
 - `src/core/reveal.ts` 显隐：条和动作的出现/消失条件、迟滞、首次浮现写一行事件流。没有焦点队列，浮现不暂停也不打断快进；注意力由世界自然运转产生。
-- 物件常驻，不出现也不消失：`core/rules.ts` 的 `objectAvailable` 按行动规则判断能不能用，场景据此变灰或上色。
+- 物件常驻，不出现也不消失：`core/rules.ts` 的 `objectAvailable` 按行动规则判断能不能用，场景据此变灰或上色。菜单和近景只列现在能做的事。
+- `src/core/skills.ts` 熟练度与自动：学会一件事的条件、进度；技能栏按钮第一次做时出现，学会后一点就自动做。自动做包括收尾；开个头就不用守着的事写成后台的事（`background`，`core/rules.ts` 的 `stepTasks`）。
 - `src/core/feed.ts` 事件流：世界内部的文字，也是教学通道。
 - `src/core/record.ts` 记录：按时间采样，供结算使用。
 - `src/core/rng.ts` 随机：可存档，每个独立过程（生活、行情、新闻）各用一条流。
 - `src/core/world.ts` 把各系统串成「一游戏分钟」。
 - `src/scene/` 场景：房间、窗户、物件、条、事件流的绘制与点击。只读状态、发出意图，不含规则。
-- `src/data/` 内容数据表（条、物件、行动、显隐规则、文案），和代码分开。
+- `src/data/` 内容数据表（条、物件、行动、显隐规则、文案，还有这个人的样子 `person.ts`），和代码分开。
 - `docs/HANDOFF.md` 交接文档。`reference/` 旧原型，零件库，见 `reference/README.md`。
 
 显隐 id 约定：`bar:<条>`、`act:<动作>`。物件不走显隐。

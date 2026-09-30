@@ -23,6 +23,14 @@ export interface Ongoing {
   start: number;
   /** 预定结束时间；undefined 表示直到被打断或手动停止。 */
   until?: number;
+  /** 身体被这件事占住（例如睡着）：别的事都做不了，只能先停下它。 */
+  occupies?: boolean;
+}
+
+/** 在后台进行的事（例如自动烧水）：开了头，小人就去做别的，条件成立时顺手收尾。 */
+export interface Task {
+  actionId: string;
+  start: number;
 }
 
 export interface GameState {
@@ -31,10 +39,12 @@ export interface GameState {
   rng: RngStreams;
   /** 当前游戏时间（游戏分钟）。 */
   t: number;
+  /** 这个人是谁：称呼、样子（内容由 data/person 决定）。只影响画面和称呼，不进规则。 */
+  person: Record<string, string>;
   /** 各根条，0–100。哪些条存在由 data/bars 决定。 */
   bars: Record<string, number>;
-  /** 心情等级 0–4：心死、半死、平常、快乐、幸福。 */
-  moodLv: number;
+  /** 各根条的等级（例如心情 0–4：心死、半死、平常、快乐、幸福）。哪些条分级由 data/bars 决定。 */
+  levels: Record<string, number>;
   money: number;
   /** 长期积累：技能、回忆、纪念物计数等。 */
   accum: Record<string, number>;
@@ -42,7 +52,12 @@ export interface GameState {
   items: Record<string, number>;
   /** 一次性标记：发生过的事、已发出的消息等。 */
   flags: Record<string, true>;
+  /** 物件自己的状态（水壶里的水和温度、桌上泡着的面……），键是「物件.属性」。 */
+  things: Record<string, number>;
+  /** 各物件上一次给「手动」心情的时间，防止反复点同一件事刷心情。 */
+  cooldowns: Record<string, number>;
   ongoing: Ongoing | null;
+  tasks: Task[];
   reveal: RevealState;
   feed: FeedLine[];
   ledger: LedgerEntry[];
@@ -54,9 +69,11 @@ export interface NewStateOptions {
   /** 开局时间，默认第 1 天 18:00。 */
   t?: number;
   bars?: Record<string, number>;
-  moodLv?: number;
+  levels?: Record<string, number>;
   money?: number;
   items?: Record<string, number>;
+  things?: Record<string, number>;
+  person?: Record<string, string>;
 }
 
 export function createState(o: NewStateOptions = {}): GameState {
@@ -66,13 +83,17 @@ export function createState(o: NewStateOptions = {}): GameState {
     seed: o.seed ?? (Math.random() * 2 ** 31) | 0,
     rng: {},
     t,
+    person: { ...(o.person ?? {}) },
     bars: { ...(o.bars ?? {}) },
-    moodLv: o.moodLv ?? 0,
+    levels: { ...(o.levels ?? {}) },
     money: o.money ?? 0,
     accum: {},
     items: { ...(o.items ?? {}) },
     flags: {},
+    things: { ...(o.things ?? {}) },
+    cooldowns: {},
     ongoing: null,
+    tasks: [],
     reveal: { visible: {}, seen: {}, hideSince: {} },
     feed: [],
     ledger: [],
