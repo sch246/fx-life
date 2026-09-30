@@ -7,7 +7,7 @@ import { isVisible } from '../src/core/reveal';
 import { barPreview, blockedReason, keepsCurrent, objectAvailable, objectMenu, poseOf, running, stopTask, type ActionDef } from '../src/core/rules';
 import { learned } from '../src/core/skills';
 import { dispenserWater, hasHot, hotSource, k, w } from '../src/data/water';
-import { NOODLES, soakedFor, stage } from '../src/data/noodles';
+import { NOODLES, heat, soak, stage } from '../src/data/noodles';
 import { SKILLS } from '../src/data/skills';
 import { CONTENT, DEMO_END_FLAG, newGame } from '../src/data';
 import { at, hourOf } from '../src/core/time';
@@ -35,7 +35,7 @@ function carefulPlayer(s: GameState): void {
   const thirsty = s.bars.water < 50;
   const st = stage(s);
   if (st === 6) tryDo(s, act('noodle-eat'));
-  if (st === 5 && soakedFor(s) >= 4) tryDo(s, act('noodle-open'));
+  if (st === 5 && heat(s) >= 4) tryDo(s, act('noodle-open'));
   if (st === 4) tryDo(s, act('noodle-cover'));
   if (st === 3 || st === 4) for (const p of ['sauce', 'salt', 'veg']) tryDo(s, act(`noodle-${p}`));
   const src = hotSource(s, NOODLES.water);
@@ -227,6 +227,34 @@ describe('第一片走查', () => {
       expect(cook(12).feed.at(-1)!.text).toBe('面泡坨了。');
     });
 
+    it('热值只在盖着时涨，水值冲上水就涨：不盖就泡不熟，冲水超过十分钟不管盖没盖都坨', () => {
+      /** 冲上水先敞着 open 分钟，再盖上 covered 分钟，揭开。 */
+      const soakIt = (open: number, covered: number) => {
+        const s = newGame(1);
+        s.things['kettle.water'] = 1.5;
+        s.things['kettle.temp'] = 100;
+        for (const id of ['take-noodles', 'noodle-tear', 'noodle-unpack', 'noodle-sauce', 'noodle-salt', 'noodle-veg', 'noodle-pour']) tryDo(s, act(id));
+        run(s, open);
+        if (covered) {
+          tryDo(s, act('noodle-cover'));
+          run(s, covered);
+          perform(s, CONTENT, act('noodle-open'));
+        }
+        return s;
+      };
+      const bare = soakIt(8, 0);
+      expect([heat(bare), soak(bare)]).toEqual([0, 8]);
+      expect(tryDo(bare, act('noodle-cover'))).toBe(true);
+      const late = soakIt(5, 3);
+      expect([heat(late), soak(late)]).toEqual([3, 8]);
+      expect(late.feed.at(-1)!.text).toBe('泡好了。');
+      expect(soakIt(9, 3).feed.at(-1)!.text).toBe('面泡坨了。');
+      // 开吃就不再泡了。
+      perform(late, CONTENT, act('noodle-eat'));
+      run(late, 5);
+      expect(soak(late)).toBe(8);
+    });
+
     it('按规矩泡好才长熟练度；料包没放全，淡，也不算', () => {
       const good = cook(5);
       perform(good, CONTENT, act('noodle-eat'));
@@ -348,6 +376,20 @@ describe('第一片走查', () => {
       expect(k(s, 'on')).toBe(0);
       expect(running(s, 'auto-boil')).toBe(false);
     });
+  });
+
+  it('开局挑的样子和称呼不进规则：同样的一天过得一模一样', () => {
+    const a = newGame(7);
+    const b = newGame(7);
+    b.person = { pronoun: 'she', hair: 'long', outfit: 'dress' };
+    for (let i = 0; i < 24 * 60; i++) {
+      carefulPlayer(a);
+      carefulPlayer(b);
+      stepWorld(a, CONTENT);
+      stepWorld(b, CONTENT);
+    }
+    expect(b.bars).toEqual(a.bars);
+    expect(b.feed).toEqual(a.feed);
   });
 
   it('手动做事略微加心情，同一个物件一小时内只算一次', () => {

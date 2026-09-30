@@ -19,8 +19,9 @@ import { learned, skillProgress } from '../core/skills';
 import { daylight, stamp, hm } from '../core/time';
 import { MESSAGES } from '../data/messages';
 import { dispenserWater, hotSource, k, vessel } from '../data/water';
-import { NOODLES, PACKETS, n, quality, soakedFor, stage } from '../data/noodles';
+import { NOODLES, PACKETS, heat, n, quality, soak, stage } from '../data/noodles';
 import { layerAt, layerOf, standAt, type Spot } from '../data/objects';
+import { HAIR_COLOR, PERSON_PARTS, SKIN, outfit, pronoun } from '../data/person';
 import { CityView } from './window';
 
 export interface SceneIntents {
@@ -34,6 +35,20 @@ export interface SceneIntents {
   /** 点了地板：能走过去返回 true（睡着时、暂停时不能）。 */
   walk(): boolean;
   restart(): void;
+  /** 开局挑这个人的样子（称呼、发型、衣服），挑好了开始。 */
+  choosePerson(part: string, id: string): void;
+  start(): void;
+}
+
+/** 泡面上的两根竖条：热值（盖着泡够就熟）、水值（冲水后涨满就坨）。 */
+const GAUGES = '<i class="ng heat"><b></b><span>热</span></i><i class="ng water"><b></b><span>水</span></i>';
+function setGauges(el: HTMLElement, s: GameState): void {
+  el.classList.toggle('gauged', stage(s) >= 4 && !n(s, 'ate'));
+  el.style.setProperty('--nh', String(Math.min(1, heat(s) / NOODLES.readyMin)));
+  el.style.setProperty('--nw', String(Math.min(1, soak(s) / NOODLES.soggyMin)));
+  el.classList.toggle('cooked', heat(s) >= NOODLES.readyMin);
+  el.classList.toggle('soggy', soak(s) > NOODLES.soggyMin);
+  el.classList.toggle('hot', stage(s) >= 4 && soak(s) < 20);
 }
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
@@ -69,6 +84,8 @@ export class Scene {
   private readonly bars = new Map<string, { el: HTMLElement; fill: HTMLElement; track: HTMLElement }>();
   private readonly feed: HTMLElement;
   private readonly pauseBtn: HTMLButtonElement;
+  private readonly who: HTMLElement;
+  private walkTimer = 0;
   private readonly actions: Map<string, ActionDef>;
   private readonly skills: readonly SkillDef[];
   private feedCount = 0;
@@ -117,22 +134,31 @@ export class Scene {
           <div class="floor"></div>
           <div class="sun-patch"></div>
           <div class="window"><canvas class="city"></canvas><span class="win-time"></span></div>
-          <button type="button" class="table-cup" hidden aria-label="泡面"><i class="film"></i><i class="steam"></i><span class="tip">泡面</span></button>
+          <button type="button" class="table-cup" hidden aria-label="泡面"><i class="film"></i><i class="steam"></i><i class="gauges">${GAUGES}</i><span class="tip">泡面</span></button>
           <div class="kettle-fx"><i class="glow"></i><i class="steam"></i></div>
           <div class="disp-water"></div>
-          <div class="character" aria-hidden="true"><i class="head"></i><i class="body"></i></div>
+          <div class="character" aria-hidden="true"><i class="hair-back"></i><i class="leg l"></i><i class="leg r"></i><i class="skirt"></i><i class="neck"></i><i class="torso"></i><i class="arm l"></i><i class="arm r"></i><i class="head"><i class="hair"></i><i class="eye l"></i><i class="eye r"></i><i class="cheek l"></i><i class="cheek r"></i></i><i class="held-phone"></i></div>
           <nav class="skills" aria-label="技能"></nav>
           <div class="skill-panel" hidden></div>
           <div class="toast" aria-live="polite"></div>
           <div class="menu" role="menu" hidden></div>
           <div class="closeup" hidden></div>
           <div class="phone-screen" hidden></div>
-          <div class="cheer" hidden><div class="confetti"></div><div class="cheer-card"><b></b><span>【自动】已解锁，点左上角的按钮就能让他自己做</span></div></div>
+          <div class="cheer" hidden><div class="confetti"></div><div class="cheer-card"><b></b><span></span></div></div>
           <div class="end" hidden>
             <p>第一片的试玩到这里结束。</p>
             <p class="end-time"></p>
             <button type="button" class="restart">重新开始</button>
           </div>
+        </section>
+        <section class="who" aria-label="这个人" hidden>
+          <div class="who-rows">${PERSON_PARTS.map(
+            (p) =>
+              `<div class="who-row"><span>${p.name}</span><div class="who-opts">${p.options
+                .map((o) => `<button type="button" data-part="${p.id}" data-opt="${o.id}">${esc(o.name)}</button>`)
+                .join('')}</div></div>`,
+          ).join('')}</div>
+          <button type="button" class="who-go">就这样，开始</button>
         </section>
         <section class="bars" aria-label="状态"></section>
         <ol class="feed" aria-live="polite"></ol>
@@ -157,6 +183,13 @@ export class Scene {
     this.ff = $('.ff');
     this.feed = $('.feed');
     this.pauseBtn = $('.pause');
+    this.who = $('.who');
+    // 开局挑样子：点一项，房间里的人跟着变；挑好了开始。
+    this.who.addEventListener('click', (e) => {
+      const t = (e.target as HTMLElement).closest<HTMLElement>('[data-part]');
+      if (t) intents.choosePerson(t.dataset.part!, t.dataset.opt!);
+    });
+    $('.who-go').addEventListener('click', () => intents.start());
     this.pauseBtn.addEventListener('click', () => intents.togglePause());
     // 桌上的面：点它就是凑近小桌上的这一桶。
     this.tableCup.addEventListener('click', (e) => {
@@ -297,8 +330,13 @@ export class Scene {
     if (p.x === this.spot.x && p.y === this.spot.y) return;
     this.putDownPhone();
     const d = Math.hypot(p.x - this.spot.x, (p.y - this.spot.y) * 1.6);
-    this.character.style.setProperty('--walk', `${Math.min(1.4, Math.max(0.25, d * 0.028)).toFixed(2)}s`);
+    const dur = Math.min(1.4, Math.max(0.25, d * 0.028));
+    this.character.style.setProperty('--walk', `${dur.toFixed(2)}s`);
     this.spot = { ...p };
+    // 走路时迈腿、摆手。
+    this.character.classList.add('walking');
+    clearTimeout(this.walkTimer);
+    this.walkTimer = window.setTimeout(() => this.character.classList.remove('walking'), dur * 1000);
   }
 
   private dismiss(): void {
@@ -518,17 +556,16 @@ export class Scene {
             <i class="nv-fork"></i>
             <i class="nv-steam"></i>
             <div class="nv-packets">${packets}</div>
+            <div class="nv-gauges gauges">${GAUGES}</div>
           </div>
           <div class="kv-side" data-backdrop>
-            <p class="nv-note">${note}<small class="nv-timer"></small></p>
+            <p class="nv-note">${note}</p>
             ${acts.map((a) => `<button type="button" class="kv-btn" data-act="${a.id}">${esc(a.label)}</button>`).join('')}
           </div>
         </div>`;
     }
-    const soaking = st >= 4;
-    const timer = this.closeup.querySelector('.nv-timer');
-    if (timer) timer.textContent = soaking ? `泡了 ${soakedFor(s)} 分钟` : '';
-    this.closeup.querySelector('.nv-scene')?.classList.toggle('hot', soaking && soakedFor(s) < 20);
+    const scene = this.closeup.querySelector<HTMLElement>('.nv-scene');
+    if (scene) setGauges(scene, s);
   }
 
   private renderPhone(s: GameState): void {
@@ -614,7 +651,7 @@ export class Scene {
     if (key === this.panelKey) return;
     this.panelKey = key;
     if (learned(s, sk)) {
-      this.skillPanel.innerHTML = `<div class="sp-head"><b>${esc(sk.name)}</b><em>会了</em></div><p class="sp-foot">点一下，他就自己做完；做着的时候再点一下，提前收尾。</p>`;
+      this.skillPanel.innerHTML = `<div class="sp-head"><b>${esc(sk.name)}</b><em>会了</em></div><p class="sp-foot">点一下，${pronoun(s)}就自己做完；做着的时候再点一下，提前收尾。</p>`;
     } else {
       const p = skillProgress(s, sk);
       const conds = sk.conditions
@@ -623,10 +660,34 @@ export class Scene {
           return `<li class="${have >= c.need ? 'ok' : ''}"><p>${esc(c.label)}</p><div class="sp-row"><i class="sp-bar" style="--p:${have / c.need}"></i><em>${have}/${c.need}</em></div></li>`;
         })
         .join('');
-      this.skillPanel.innerHTML = `<div class="sp-head"><b>学会「${esc(sk.name)}」</b><em>${p.have}/${p.need}</em></div><ul>${conds}</ul><p class="sp-foot">学会之后，点这个按钮他就自己做。</p>`;
+      this.skillPanel.innerHTML = `<div class="sp-head"><b>学会「${esc(sk.name)}」</b><em>${p.have}/${p.need}</em></div><ul>${conds}</ul><p class="sp-foot">学会之后，点这个按钮${pronoun(s)}就自己做。</p>`;
     }
     this.skillPanel.style.left = `${this.skillsEl.offsetLeft + btn.offsetLeft + btn.offsetWidth + 8}px`;
     this.skillPanel.style.top = `${this.skillsEl.offsetTop + btn.offsetTop}px`;
+  }
+
+  /** 开局挑样子的那一栏：挑着的项按下去；开始后收起。 */
+  private renderWho(s: GameState, picking: boolean): void {
+    this.who.hidden = !picking;
+    this.room.classList.toggle('picking', picking);
+    if (!picking) return;
+    for (const b of this.who.querySelectorAll<HTMLElement>('[data-part]')) {
+      b.setAttribute('aria-pressed', String(s.person[b.dataset.part!] === b.dataset.opt));
+    }
+  }
+
+  /** 按这个人的样子画：肤色、发型、衣服。 */
+  private dressCharacter(s: GameState): void {
+    const o = outfit(s);
+    const c = this.character;
+    c.dataset.hair = s.person.hair ?? 'short';
+    c.classList.toggle('skirted', !!o.skirt);
+    c.style.setProperty('--skin', SKIN);
+    c.style.setProperty('--hair', HAIR_COLOR);
+    c.style.setProperty('--top', o.top);
+    c.style.setProperty('--legs', o.legs);
+    c.style.setProperty('--shoes', o.shoes);
+    c.style.setProperty('--skirt', o.skirt ?? 'transparent');
   }
 
   /** 进度涨了：小提示；学会了：庆祝。 */
@@ -641,7 +702,7 @@ export class Scene {
       if (!isVisible(s, `act:${k.auto}`)) continue;
       if (!this.fresh.has(k.id)) this.fresh.set(k.id, now + 4000);
       if (is <= was) continue;
-      if (learned(s, k)) this.celebrate(k.name);
+      if (learned(s, k)) this.celebrate(k.name, pronoun(s));
       else {
         const p = skillProgress(s, k);
         this.showToast(`${k.name} 熟练度 +1　${p.have}/${p.need}`);
@@ -659,8 +720,9 @@ export class Scene {
     this.toastTimer = window.setTimeout(() => this.toast.classList.remove('show'), 2600);
   }
 
-  private celebrate(name: string): void {
+  private celebrate(name: string, who: string): void {
     this.cheer.querySelector('b')!.textContent = `学会了 ${name}！`;
+    this.cheer.querySelector('span')!.textContent = `【自动】已解锁，点左上角的按钮就能让${who}自己做`;
     const box = this.cheer.querySelector('.confetti')!;
     box.innerHTML = Array.from({ length: 48 }, (_, i) => {
       const c = CONFETTI[i % CONFETTI.length];
@@ -679,8 +741,9 @@ export class Scene {
     }, 3600);
   }
 
-  render(s: GameState, paused: boolean, fastForward: boolean, ended: string | null): void {
+  render(s: GameState, paused: boolean, fastForward: boolean, ended: string | null, picking = false): void {
     this.state = s;
+    this.renderWho(s, picking);
     const now = performance.now();
     this.city.draw(s.t, now);
     this.winTime.textContent = hm(s.t);
@@ -703,7 +766,7 @@ export class Scene {
     this.tableCup.hidden = !(st > 0 || pose === 'eat');
     this.tableCup.disabled = st === 0;
     this.tableCup.dataset.stage = String(st);
-    this.tableCup.classList.toggle('hot', st >= 4 && soakedFor(s) < 20);
+    setGauges(this.tableCup, s);
     const temp = k(s, 'temp');
     this.kettleFx.style.setProperty('--heat', String(k(s, 'water') > 0 ? Math.max(0, (temp - 55) / 45) : 0));
     this.kettleFx.classList.toggle('steaming', k(s, 'water') > 0 && temp >= 95);
@@ -726,6 +789,7 @@ export class Scene {
     }
     const phoneShown = this.phoneOpen && !busy;
     this.character.dataset.pose = pose || (phoneShown ? 'phone' : '');
+    this.dressCharacter(s);
     this.renderMenu(s);
 
     if (this.closeupId) this.renderCloseup(s);
@@ -749,8 +813,8 @@ export class Scene {
     }
 
     this.pauseBtn.textContent = paused ? '继续' : '暂停';
-    this.pauseBtn.hidden = !!ended;
-    this.room.classList.toggle('paused', paused && !ended);
+    this.pauseBtn.hidden = !!ended || picking;
+    this.room.classList.toggle('paused', paused && !ended && !picking);
     this.ff.textContent = fastForward ? '»» 睡着' : '';
 
     this.end.hidden = !ended;

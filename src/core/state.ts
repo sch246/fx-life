@@ -39,6 +39,8 @@ export interface GameState {
   rng: RngStreams;
   /** 当前游戏时间（游戏分钟）。 */
   t: number;
+  /** 这个人是谁：称呼、样子（内容由 data/person 决定）。只影响画面和称呼，不进规则。 */
+  person: Record<string, string>;
   /** 各根条，0–100。哪些条存在由 data/bars 决定。 */
   bars: Record<string, number>;
   /** 各根条的等级（例如心情 0–4：心死、半死、平常、快乐、幸福）。哪些条分级由 data/bars 决定。 */
@@ -71,6 +73,7 @@ export interface NewStateOptions {
   money?: number;
   items?: Record<string, number>;
   things?: Record<string, number>;
+  person?: Record<string, string>;
 }
 
 export function createState(o: NewStateOptions = {}): GameState {
@@ -80,6 +83,7 @@ export function createState(o: NewStateOptions = {}): GameState {
     seed: o.seed ?? (Math.random() * 2 ** 31) | 0,
     rng: {},
     t,
+    person: { ...(o.person ?? {}) },
     bars: { ...(o.bars ?? {}) },
     levels: { ...(o.levels ?? {}) },
     money: o.money ?? 0,

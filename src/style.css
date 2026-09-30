@@ -66,6 +66,20 @@ html, body {
   transition: filter 0.3s;
 }
 .room.paused { filter: saturate(0.4) brightness(0.8); }
+/* 开局挑样子时，房间只看不点。 */
+.room.picking { pointer-events: none; }
+
+/* 开局挑这个人的样子：称呼、发型、衣服，房间里的人跟着变。 */
+.who { display: grid; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.who-rows { display: grid; gap: 8px; }
+.who-row { display: grid; grid-template-columns: 3em 1fr; gap: 8px; align-items: center; }
+.who-row > span { color: var(--ink-dim); font-size: 13px; }
+.who-opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.who-opts button, .who-go { font: inherit; font-size: 14px; border-radius: 6px; padding: 5px 12px; cursor: pointer; }
+.who-opts button { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+.who-opts button:hover { border-color: #6a6d76; }
+.who-opts button[aria-pressed="true"] { background: #e7e1d4; color: #1d1e22; border-color: #e7e1d4; }
+.who-go { justify-self: end; background: #f5d36b; color: #2a2418; border: 0; font-weight: 600; }
 .wall { position: absolute; inset: 0 0 28% 0; background: linear-gradient(var(--wall-top), var(--wall-bottom)); filter: brightness(var(--lit)); }
 .floor {
   position: absolute;
@@ -237,6 +251,19 @@ html, body {
   opacity: 0;
   filter: blur(2px);
 }
+/* 泡面上的两根竖条：热值（盖着才涨，满了就熟）、水值（冲水后一直涨，满了再泡就坨）。 */
+.gauges { position: absolute; display: none; gap: 3px; pointer-events: none; }
+.gauged .gauges { display: flex; }
+.ng { position: relative; flex: 1; border-radius: 2px; background: rgba(15, 16, 20, 0.7); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18); }
+.ng b { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 2px; transition: height 0.4s, background 0.4s; }
+.ng.heat b { height: calc(var(--nh, 0) * 100%); background: #e88a5b; }
+.ng.water b { height: calc(var(--nw, 0) * 100%); background: #8fbfe6; }
+.cooked .ng.heat b { background: #f5d36b; }
+.soggy .ng.water b { background: #e5484d; }
+.ng span { display: none; }
+.table-cup .gauges { left: 120%; bottom: 0; height: 110%; width: 70%; }
+.nv-gauges { right: -4%; bottom: 18%; height: 46%; width: 11%; gap: 22%; }
+.nv-gauges .ng span { display: block; position: absolute; top: 100%; left: 50%; transform: translate(-50%, 4px); color: var(--ink-dim); font-size: 12px; white-space: nowrap; }
 .kettle-fx.steaming .steam, .table-cup.hot .steam { animation: steam 2.2s ease-out infinite; }
 @keyframes steam { 0% { opacity: 0; transform: translateY(20%) scaleX(0.7); } 40% { opacity: 1; } 100% { opacity: 0; transform: translateY(-60%) scaleX(1.3); } }
 
@@ -288,6 +315,7 @@ html, body {
   .kv-side { gap: 4px; max-height: 100%; overflow-y: auto; align-content: start; padding-top: 4px; }
   .kv-btn { padding: 4px 8px; font-size: 12px; }
   .nv-note { font-size: 12px; }
+  .nv-gauges .ng span { font-size: 10px; }
 }
 
 /* ---------- 角色 ---------- */
@@ -308,29 +336,109 @@ html, body {
   filter: brightness(var(--lit));
   transition: left var(--walk) linear, top var(--walk) linear, transform 0.8s ease, filter 1s;
 }
+.character {
+  --skin: #dcbfa0;
+  --hair: #2b2420;
+  --top: #616b7a;
+  --legs: #363b45;
+  --shoes: #e6e2da;
+  --skirt: transparent;
+}
+/* 身体各部分都按角色框的百分比摆：头、脖子、上身、两只胳膊、两条腿、（裙子）。颜色来自 data/person。 */
+.character > i, .character .head > i { position: absolute; display: block; }
 .character .head {
-  position: absolute;
-  left: 18%;
+  left: 16%;
   top: 0;
-  width: 64%;
+  width: 68%;
   aspect-ratio: 1;
-  border-radius: 50%;
-  background: #cdbfae;
+  border-radius: 46% 46% 44% 44%;
+  background: var(--skin);
+  z-index: 3;
+  transition: transform 0.4s;
 }
-.character .body {
-  position: absolute;
-  left: 0;
-  top: 22%;
-  width: 100%;
-  height: 78%;
-  border-radius: 40% 40% 10% 10%;
-  background: linear-gradient(#58606e 0 60%, #3b4049 60%);
+.character .eye { top: 52%; width: 10%; height: 13%; border-radius: 50%; background: #2a2522; transition: height 0.3s, top 0.3s; }
+.character .eye.l { left: 27%; }
+.character .eye.r { right: 27%; }
+.character .cheek { top: 68%; width: 16%; height: 9%; border-radius: 50%; background: rgba(226, 120, 110, 0.35); }
+.character .cheek.l { left: 13%; }
+.character .cheek.r { right: 13%; }
+/* 头发：短发是盖在头顶的一片；长发再在身后垂到肩下；丸子头在头顶挽一个髻。 */
+.character .hair {
+  left: -7%;
+  top: -7%;
+  width: 114%;
+  height: 50%;
+  border-radius: 55% 55% 22% 22% / 80% 80% 25% 25%;
+  background: var(--hair);
 }
+.character .hair::after { content: ''; position: absolute; display: none; left: 31%; top: -30%; width: 38%; aspect-ratio: 1; border-radius: 50%; background: var(--hair); }
+.character[data-hair="bun"] .hair::after { display: block; }
+.character .hair-back { display: none; left: 11%; top: 5%; width: 78%; height: 25%; border-radius: 40% 40% 16% 16%; background: var(--hair); z-index: 0; }
+.character[data-hair="long"] .hair-back { display: block; }
+.character[data-hair="long"] .hair { border-radius: 55% 55% 12% 12% / 80% 80% 20% 20%; height: 56%; }
+.character .neck { left: 41%; top: 17%; width: 18%; height: 4%; background: var(--skin); z-index: 1; }
+.character .torso {
+  left: 14%;
+  top: 19.5%;
+  width: 72%;
+  height: 32%;
+  border-radius: 38% 38% 10% 10% / 22% 22% 8% 8%;
+  background: var(--top);
+  z-index: 2;
+}
+.character .arm {
+  top: 20.5%;
+  width: 15%;
+  height: 29%;
+  border-radius: 40% 40% 45% 45% / 14% 14% 18% 18%;
+  background: linear-gradient(var(--top) 0 80%, var(--skin) 80%);
+  transform-origin: 50% 0;
+  z-index: 2;
+  transition: transform 0.4s;
+}
+.character .arm.l { left: 2%; }
+.character .arm.r { right: 2%; }
+.character .leg {
+  top: 50%;
+  width: 26%;
+  height: 47%;
+  border-radius: 3px 3px 2px 2px;
+  background: var(--legs);
+  transform-origin: 50% 0;
+  z-index: 1;
+}
+.character .leg.l { left: 22%; }
+.character .leg.r { left: 52%; }
+.character .leg::after { content: ''; position: absolute; left: -12%; right: -12%; bottom: -2%; height: 9%; border-radius: 40% 40% 3px 3px; background: var(--shoes); }
+.character .skirt { display: none; left: 9%; top: 47%; width: 82%; height: 21%; clip-path: polygon(16% 0, 84% 0, 100% 100%, 0 100%); background: var(--skirt); z-index: 2; }
+.character.skirted .skirt { display: block; }
+.character .held-phone { display: none; left: 35%; top: 37%; width: 30%; height: 11%; border-radius: 3px; background: #1b1e25; box-shadow: inset 0 0 0 2px #1b1e25, inset 0 0 0 20px #9cc3ff55; z-index: 4; }
+
+/* 走路：迈腿、摆手。 */
+.character.walking .leg.l { animation: stride 0.5s ease-in-out infinite; }
+.character.walking .leg.r { animation: stride 0.5s ease-in-out infinite reverse; }
+.character.walking .arm.l { animation: swing 0.5s ease-in-out infinite reverse; }
+.character.walking .arm.r { animation: swing 0.5s ease-in-out infinite; }
+@keyframes stride { 0%, 100% { transform: rotate(10deg); } 50% { transform: rotate(-10deg); } }
+@keyframes swing { 0%, 100% { transform: rotate(12deg); } 50% { transform: rotate(-12deg); } }
+
+/* 看手机：低头，两手在身前捧着手机。 */
+.character[data-pose="phone"] .head { transform: translateY(6%); }
+.character[data-pose="phone"] .eye { top: 60%; height: 8%; }
+.character[data-pose="phone"] .arm.l { transform: rotate(-19deg); }
+.character[data-pose="phone"] .arm.r { transform: rotate(19deg); }
+.character[data-pose="phone"] .held-phone { display: block; }
+/* 看窗外：背对着我们，看不见脸。 */
+.character[data-pose="look"] .eye, .character[data-pose="look"] .cheek { display: none; }
+.character[data-pose="look"] .hair { height: 92%; border-radius: 50% 50% 40% 40%; }
+/* 吃面：一只手一下一下往嘴边送。 */
+.character[data-pose="eat"] .arm.r { animation: spoon 1.4s ease-in-out infinite; }
+@keyframes spoon { 0%, 100% { transform: rotate(18deg); } 50% { transform: rotate(150deg); } }
+/* 躺下、睡着（闭眼）。 */
 .character[data-pose="lie"],
 .character[data-pose="sleep"] { left: 16%; top: 45%; transform: rotate(-90deg); transform-origin: 50% 80%; }
 .character[data-pose="sleep"] { filter: brightness(calc(0.7 * var(--lit))); }
-.character[data-pose="phone"] .head { transform: translateY(10%); }
-.character .head { transition: transform 0.4s; }
+.character[data-pose="sleep"] .eye { top: 60%; height: 3%; }
 
 /* ---------- 菜单、状态、近景、手机 ---------- */
 

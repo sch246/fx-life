@@ -10,8 +10,11 @@ const speed = Number(new URLSearchParams(location.search).get('speed')) || 1;
 
 const state = newGame();
 const clock = new Clock(() => stepWorld(state, CONTENT));
-const startedAt = performance.now();
+let startedAt = performance.now();
 let endedText: string | null = null;
+// 开局先挑这个人的样子；挑的时候时间不走。
+let started = false;
+clock.setPaused(true);
 
 // 暂停时可以查看，不能行动。
 function begin(a: ActionDef): boolean {
@@ -43,7 +46,7 @@ function choose(entry: MenuEntry): void {
 
 const scene = new Scene(document.getElementById('app')!, CONTENT, OBJECTS, {
   togglePause: () => {
-    if (!endedText) clock.setPaused(!clock.paused);
+    if (!endedText && started) clock.setPaused(!clock.paused);
   },
   clickObject: (id) => {
     // 点能打开来看的物件（行李箱、水壶、桌上的面、手机）：打开它（手机再点一下放下）。暂停时不打开，只能看。
@@ -69,10 +72,19 @@ const scene = new Scene(document.getElementById('app')!, CONTENT, OBJECTS, {
     return true;
   },
   restart: () => location.reload(),
+  choosePerson: (part, id) => {
+    if (!started) state.person[part] = id;
+  },
+  start: () => {
+    if (started) return;
+    started = true;
+    startedAt = performance.now();
+    clock.setPaused(false);
+  },
 });
 
 document.addEventListener('keydown', (e) => {
-  if (e.code === 'Space' && !endedText) {
+  if (e.code === 'Space' && !endedText && started) {
     e.preventDefault();
     clock.setPaused(!clock.paused);
   }
@@ -90,7 +102,7 @@ function frame(now: number) {
     clock.setPaused(true);
     endedText = `现实用时 ${Math.round((now - startedAt) / 60000)} 分钟`;
   }
-  scene.render(state, clock.paused, clock.fastForward, endedText);
+  scene.render(state, clock.paused, clock.fastForward, endedText, !started);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

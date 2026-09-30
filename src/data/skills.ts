@@ -20,7 +20,7 @@ export const SKILLS: readonly SkillDef[] = [
     name: '泡面',
     auto: 'auto-noodles',
     seenWhen: (s) => !!s.flags['tried:soak'],
-    conditions: [{ label: '亲手泡好一桶面再吃：料包放全、冲热水、盖好盖子，三到十分钟之间开吃', have: practice('soak'), need: 3 }],
+    conditions: [{ label: '亲手泡好一桶面再吃：料包放全、冲热水、盖着泡够三分钟，冲水后十分钟内开吃', have: practice('soak'), need: 3 }],
   },
 ];
 

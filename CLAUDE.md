@@ -32,7 +32,7 @@ npm run build      # 输出 dist/，可直接当静态页面部署
 - `src/core/rng.ts` 随机：可存档，每个独立过程（生活、行情、新闻）各用一条流。
 - `src/core/world.ts` 把各系统串成「一游戏分钟」。
 - `src/scene/` 场景：房间、窗户、物件、条、事件流的绘制与点击。只读状态、发出意图，不含规则。
-- `src/data/` 内容数据表（条、物件、行动、显隐规则、文案），和代码分开。
+- `src/data/` 内容数据表（条、物件、行动、显隐规则、文案，还有这个人的样子 `person.ts`），和代码分开。
 - `docs/HANDOFF.md` 交接文档。`reference/` 旧原型，零件库，见 `reference/README.md`。
 
 显隐 id 约定：`bar:<条>`、`act:<动作>`。物件不走显隐。
