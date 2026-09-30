@@ -169,8 +169,9 @@ export function startAction(s: GameState, a: ActionDef): void {
 }
 
 function finish(s: GameState, a: ActionDef, foreground = true): void {
-  if (foreground) s.ongoing = null;
+  // 先按结束前的状态定下这句话（例如睡着了没有），再结束。
   const line = text(s, a.endLine);
+  if (foreground) s.ongoing = null;
   const end = resolve(s, a.onEnd);
   if (end) applyEffect(s, end, 1, a.reason ?? a.label, a.cat);
   if (line) say(s, line);

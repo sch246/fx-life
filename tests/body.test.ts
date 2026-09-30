@@ -8,7 +8,7 @@ import { CONTENT, newGame } from '../src/data';
 import { debugText } from '../src/scene/debug';
 import { perform } from '../src/core/world';
 import { at } from '../src/core/time';
-import { LIGHT_WAKE_AFTER_MIN, fallAsleepMin } from '../src/data/room';
+
 import { act, run } from './helpers';
 
 const barIds = new Set(BARS.map((b) => b.id));
@@ -82,19 +82,25 @@ describe('身体模型：单一事实来源', () => {
     expect(isVisible(s, 'bar:energy')).toBe(false);
   });
 
-  it('白天小睡：睡着之后睡过一阵，亮光才把人叫醒', () => {
+  it('白天太亮睡不着，事件流写一句；累垮了才顾不上亮，照样睡', () => {
     const s = newGame(1);
     s.t = at(2, 14);
     s.bars.energy = 60;
     perform(s, CONTENT, act('lie'));
     perform(s, CONTENT, act('sleep'));
-    let slept = 0;
-    while (s.ongoing?.actionId === 'sleep' && slept < 600) {
-      stepWorld(s, CONTENT);
-      slept++;
-    }
-    expect(slept).toBeGreaterThanOrEqual(fallAsleepMin(s) + LIGHT_WAKE_AFTER_MIN);
-    expect(slept).toBeLessThan(4 * 60);
+    stepWorld(s, CONTENT);
+    expect(s.ongoing).toBeNull();
+    expect(s.feed.some((l) => l.text === '太亮了，睡不着。')).toBe(true);
+    expect(s.feed.some((l) => l.text === '醒了。')).toBe(false);
+
+    const worn = newGame(1);
+    worn.t = at(2, 14);
+    worn.bars.energy = 25;
+    perform(worn, CONTENT, act('lie'));
+    perform(worn, CONTENT, act('sleep'));
+    run(worn, 60);
+    expect(worn.ongoing?.actionId).toBe('sleep');
+    expect(worn.ongoing?.occupies).toBe(true);
   });
 
   it('调试快照每根条都列到', () => {

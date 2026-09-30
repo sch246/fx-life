@@ -9,27 +9,24 @@ import { moodLv } from '../core/rules';
 import { BODY } from './body';
 import { MESSAGES } from './messages';
 import { learned } from './skills';
-import { LIGHT_WAKE_AFTER_MIN, fallAsleepMin, roomLight, sleepQuality } from './room';
+import { fallAsleepMin, roomLight, sleepQuality } from './room';
 import { WATER, dispenserWater, drinkBars, fill, hotSource, k, pour, vessel, w } from './water';
 import { AUTO_NOODLES, NOODLES, NOODLE_ACTIONS, stage } from './noodles';
 
 const rested = (s: GameState) => (s.bars.energy ?? 0) >= 100;
 const starving = (s: GameState) => (s.bars.stamina ?? 0) < BODY.hungryWake;
+/** 房间太亮，睡不着（累垮了才顾不上亮不亮）。 */
+const tooBright = (s: GameState) => roomLight(s) > 0.6 && (s.bars.energy ?? 0) > 30;
 /**
- * 自然醒：睡饱了天亮就醒；没睡饱也挡不住晨光——睡过一阵之后房间够亮就先醒，不等补满。
+ * 自然醒：睡饱了天亮就醒；没睡饱也挡不住晨光——房间够亮就先醒，不等补满。
  * 这样熬夜欠下的觉会带进第二天，而不是在醒来前自动还清。
- * 「睡过一阵」是睡着之后再睡 LIGHT_WAKE_AFTER_MIN：白天亮着也能小睡，只是补得慢。
+ * 同一条规则也让白天睡不着：闭上眼睛，房间太亮，就起来了。
  * 光源自 data/room 的 roomLight，不是写死的起床时刻：以后夜班白天补觉，只要房间够暗就行。
  * 房间一直全暗（遮光窗帘）时，靠"躺够九小时"兜底，不会睡不醒。
  */
 const wakeUp = (s: GameState) => {
   const since = s.t - (s.ongoing?.start ?? s.t);
-  return (
-    (rested(s) && roomLight(s) > 0.2) ||
-    (roomLight(s) > 0.6 && (s.bars.energy ?? 0) > 30 && since >= fallAsleepMin(s) + LIGHT_WAKE_AFTER_MIN) ||
-    since >= 9 * 60 ||
-    starving(s)
-  );
+  return (rested(s) && roomLight(s) > 0.2) || tooBright(s) || since >= 9 * 60 || starving(s);
 };
 
 /** 躺在床上（还没睡）：睡觉要先躺下。 */
@@ -45,7 +42,8 @@ const SLEEP: Omit<ActionDef, 'id' | 'label'> = {
   rate: sleepQuality,
   stopWhen: wakeUp,
   stopLabel: '起来',
-  endLine: '醒了。',
+  // 还没睡着就被光挡回来，是睡不着；睡着了再醒，是醒了。
+  endLine: (s) => (!s.ongoing?.occupies && tooBright(s) ? '太亮了，睡不着。' : '醒了。'),
   // 躺下一会儿才睡着；睡着之前还能看看手机。
   occupies: (s, since) => since >= fallAsleepMin(s),
   pose: (s) => (s.ongoing?.occupies ? 'sleep' : 'lie'),
