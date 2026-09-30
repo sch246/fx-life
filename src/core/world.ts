@@ -5,7 +5,7 @@ import type { GameState } from './state';
 import type { ActionDef, CueDef, Effect, Predicate } from './rules';
 import type { RevealRule } from './reveal';
 import type { SkillDef } from './skills';
-import { applyEffect, startAction, stepCues, stepOngoing, stepTasks } from './rules';
+import { applyEffect, clampBars, startAction, stepCues, stepOngoing, stepTasks } from './rules';
 import { stepReveal } from './reveal';
 import { stepRecord } from './record';
 import { say } from './feed';
@@ -81,11 +81,13 @@ export interface Content {
 export function perform(s: GameState, c: Content, a: ActionDef): void {
   startAction(s, a);
   const b = c.manualBonus;
-  if (!b || a.auto) return;
   const last = s.cooldowns[a.object];
-  if (last !== undefined && s.t - last < b.cooldownMin) return;
-  s.cooldowns[a.object] = s.t;
-  applyEffect(s, b.effect);
+  if (b && !a.auto && (last === undefined || s.t - last >= b.cooldownMin)) {
+    s.cooldowns[a.object] = s.t;
+    applyEffect(s, b.effect);
+  }
+  // 条满了、见底了照样收回 0–100；升降级在下一分钟看（到 100 或 0 就算）。
+  clampBars(s);
 }
 
 function stepLevels(s: GameState, b: BarDef): void {
@@ -120,8 +122,11 @@ export function stepWorld(s: GameState, c: Content): void {
   for (const p of c.processes ?? []) p.step(s);
   stepOngoing(s, c.actions);
   stepTasks(s, c.actions);
+  // 这一分钟里所有的变化加总之后，再看有没有满或见底，然后收回 0–100。
   for (const b of c.bars) stepLevels(s, b);
+  clampBars(s);
   stepCues(s, c.cues ?? []);
+  clampBars(s);
   stepReveal(s, c.reveals);
   stepRecord(s);
 }

@@ -130,6 +130,69 @@ describe('身体模型：单一事实来源', () => {
     expect(s.ongoing?.occupies).toBe(true);
   });
 
+  it('精力见底掉一级、条回到「累了」线下硬撑；欠着觉时天亮叫不醒，睡到补满升回一级', () => {
+    const s = newGame(1);
+    s.t = at(2, 3);
+    s.bars.energy = 0.01;
+    stepWorld(s, CONTENT);
+    expect(s.levels.energy).toBe(BODY.rested - 1);
+    expect(s.bars.energy).toBeLessThan(BODY.nourished);
+    expect(s.feed.some((l) => l.text === '熬过头了，硬撑着。')).toBe(true);
+
+    // 夜里睡下：欠着觉，第二天早上八点太阳照进来也不醒；不欠觉的人同样的精力早就被晃醒了。
+    const sleepAt = (lv: number) => {
+      const x = newGame(1);
+      x.t = at(2, 23);
+      x.levels.energy = lv;
+      x.bars.energy = 20;
+      x.bars.stamina = 90; // 吃饱了睡，不会半夜饿醒
+      x.bars.water = 90;
+      perform(x, CONTENT, act('lie'));
+      perform(x, CONTENT, act('sleep'));
+      run(x, 9 * 60);
+      return x;
+    };
+    expect(sleepAt(BODY.rested - 1).ongoing?.actionId).toBe('sleep');
+    expect(sleepAt(BODY.rested).ongoing?.actionId).toBe('lie');
+
+    // 睡到把条补满，升回一级，条从 70 接着补。
+    const r = newGame(1);
+    r.t = at(2, 22);
+    r.levels.energy = BODY.rested - 1;
+    r.bars.energy = 60;
+    perform(r, CONTENT, act('lie'));
+    perform(r, CONTENT, act('sleep'));
+    while (r.ongoing?.actionId === 'sleep' && r.levels.energy < BODY.rested) stepWorld(r, CONTENT);
+    expect(r.levels.energy).toBe(BODY.rested);
+    expect(r.feed.some((l) => l.text === '觉补回来了。')).toBe(true);
+  });
+
+  it('躺着补不上精力，只让它掉得慢一点；躺着熬到见底，照样掉一级', () => {
+    const s = newGame(1);
+    s.t = at(1, 20);
+    s.bars.energy = 60;
+    perform(s, CONTENT, act('lie'));
+    run(s, 120);
+    expect(s.bars.energy).toBeLessThan(60);
+    expect(s.bars.energy).toBeGreaterThan(60 - 8);
+    s.bars.energy = 0.01;
+    run(s, 2);
+    expect(s.levels.energy).toBe(BODY.rested - 1);
+  });
+
+  it('等级还没掉到底时，精力见底不伤体能；掉到底还撑着才透支', () => {
+    const s = newGame(1);
+    s.t = at(2, 12);
+    s.bars.energy = 5;
+    const before = s.bars.fitness;
+    run(s, 30);
+    expect(s.bars.fitness).toBeGreaterThanOrEqual(before);
+    s.levels.energy = 0;
+    s.bars.energy = 5;
+    run(s, 30);
+    expect(s.bars.fitness).toBeLessThan(before);
+  });
+
   it('调试快照每根条都列到', () => {
     const s = newGame(1);
     const txt = debugText(s, true);

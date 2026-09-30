@@ -29,7 +29,7 @@ export function debugEnabled(): boolean {
 
 export function debugText(s: GameState, paused: boolean): string {
   const out: string[] = [];
-  out.push(`${stamp(s.t)}  ${paused ? '暂停' : '走'}  心情 lv${s.levels.mood ?? 0}  体能 lv${s.levels.fitness ?? 0}`);
+  out.push(`${stamp(s.t)}  ${paused ? '暂停' : '走'}  心情 lv${s.levels.mood ?? 0}  体能 lv${s.levels.fitness ?? 0}  精力 lv${s.levels.energy ?? 0}`);
   out.push(`进行中 ${s.ongoing?.actionId ?? '—'}   后台 ${s.tasks.map((t) => t.actionId).join(',') || '—'}   面 ${s.items.noodles ?? 0}`);
   out.push('─ 条 ─────────────────────────────────────────');
   for (const id of Object.keys(s.bars)) {

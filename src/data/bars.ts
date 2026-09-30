@@ -4,7 +4,8 @@
 // 数值是第一版初值，按试玩调。
 
 import type { BarDef } from '../core/world';
-import { EFFECTS } from './body';
+import type { PreviewSteps } from '../core/rules';
+import { BODY, EFFECTS } from './body';
 import { MOOD_STYLES, START_MOOD_LV } from './mood';
 
 /** 从 body 的后果表派生这根条的 drift，drift 只在这里出现一次。 */
@@ -30,6 +31,23 @@ export const BARS: readonly BarDef[] = [
     initial: 97,
     perHour: -4,
     drift: drift('energy'),
+    // 等级是欠没欠觉，和心情、体能是同一套等级规则：
+    // 见底时掉一级，条回到「累了」线下还能硬撑（熬夜攻关），但一整天都在累的那一带里。
+    // 睡觉把条补满就升回一级，条从 70 接着补：掉了几级，要多睡几觉才养得回来。
+    levels: {
+      start: BODY.rested,
+      max: BODY.rested,
+      upTo: 70,
+      downTo: 35,
+      upLines: { 1: '缓过来一点了。', 2: '缓过来一点了。', 3: '觉补回来了。' },
+      downLines: { 2: '熬过头了，硬撑着。', 1: '困得脑子发木。', 0: '撑不住了。' },
+      styles: [
+        { thickness: 2, color: '#8a6a66' },
+        { thickness: 2, color: '#a37f6c' },
+        { thickness: 3, color: '#a89a86' },
+        { thickness: 4, color: '#9aa6a8' },
+      ],
+    },
   },
   {
     id: 'mood',
@@ -68,3 +86,10 @@ export const BARS: readonly BarDef[] = [
     },
   },
 ];
+
+/**
+ * 行动预览里箭头的个数：变化到这几条线就多一个箭头（core/rules 的 barPreview）。
+ * 持续的事看每小时：躺着 +3 是一个，看窗外 +6 两个，夜里睡觉 +12.6 三个；
+ * 一次性的看变化量：回一条消息 +10 一个，喝一杯水 +35 两个，吃一桶泡好的面 +55 三个。
+ */
+export const PREVIEW_STEPS: PreviewSteps = { perHour: [4, 10], once: [15, 40] };

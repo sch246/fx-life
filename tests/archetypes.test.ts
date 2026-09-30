@@ -60,6 +60,30 @@ describe('原型人生', () => {
     for (const w of [...earlyWakes, ...lateWakes]) expect(hourOf(w.t)).toBeGreaterThanOrEqual(5);
   });
 
+  it('通宵一夜：第二天熬过头掉等级；之后照常 22 点睡，几天内缓过来，体能没有垮', () => {
+    const s = newGame(1);
+    s.t = at(1, 18);
+    s.items.noodles = 999;
+    // 第 2 天 18:00 到第 3 天中午不睡，其余 22 点睡（sleepFrom 5 表示不到点）。
+    const policy = (x: GameState) =>
+      carefulPlayer(x, { sleepFrom: x.t >= at(2, 18) && x.t < at(3, 12) ? 5 : 22, goOut: false });
+    const lows: number[] = [];
+    for (let i = 0; i < 6 * DAY; i++) {
+      policy(s);
+      stepWorld(s, CONTENT);
+      lows.push(s.levels.energy);
+      if (s.t === at(3, 12)) {
+        // 通宵后的第二天：一定没精神，已经掉过一级。
+        expect(s.levels.energy).toBeLessThan(3);
+        expect(s.bars.energy).toBeLessThan(40);
+      }
+    }
+    if (WALK) console.log('通宵后精力等级最低到', Math.min(...lows));
+    expect(Math.min(...lows)).toBeGreaterThanOrEqual(1);
+    expect(s.levels.energy).toBe(3);
+    expect(s.levels.fitness).toBeGreaterThanOrEqual(2);
+  });
+
   it('带的观测：对照"照顾好"和"什么都不管"，看哪些带真的被进入过', () => {
     const seen = new Set<string>();
     const observe = (s: GameState, min: number, policy: (s: GameState) => void) => {

@@ -11,6 +11,7 @@ import { SKILLS } from '../src/data/skills';
 import { CONTENT, DEMO_END_FLAG, newGame } from '../src/data';
 import { at } from '../src/core/time';
 import { OBJECTS } from '../src/data/objects';
+import { PREVIEW_STEPS } from '../src/data/bars';
 import { CARRIED, carrying } from '../src/data/items';
 import { act, carefulPlayer, lyingDown, run, tryDo } from './helpers';
 
@@ -90,6 +91,16 @@ describe('第一片走查', () => {
     expect(objectAvailable(s, CONTENT.actions, 'window')).toBe(false);
     expect(objectAvailable(s, CONTENT.actions, 'bag', true)).toBe(false);
     expect(objectAvailable(s, CONTENT.actions, 'phone', true)).toBe(false);
+  });
+
+  it('预览里箭头的个数表示快慢：躺着一个，看窗外两个，夜里睡觉三个，开着灯睡少一个', () => {
+    const s = newGame(1);
+    s.t = at(1, 23);
+    expect(barPreview(s, act('lie'), PREVIEW_STEPS).energy).toBe(1);
+    expect(barPreview(s, act('look'), PREVIEW_STEPS).mood).toBe(2);
+    expect(barPreview(s, act('sleep'), PREVIEW_STEPS).energy).toBe(3);
+    perform(s, CONTENT, act('lamp-on'));
+    expect(barPreview(s, act('sleep'), PREVIEW_STEPS).energy).toBe(2);
   });
 
   it('手机带在身上，不是房间里的物件：站在哪都能拿出来回消息，睡着时拿不出来', () => {

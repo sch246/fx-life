@@ -101,9 +101,13 @@ export interface ActionDef {
 
 export const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
-/** 把一组变化按比例 k 作用到状态上。钱的变化一律记账。 */
+/**
+ * 把一组变化按比例 k 作用到状态上。钱的变化一律记账。
+ * 条在这里不收回 0–100：同一分钟里几处变化（精力的自然消耗和躺着的回补）先加总，
+ * 世界推进完这一分钟、看过有没有见底或满了（升降级）之后，再由 clampBars 收回。
+ */
 export function applyEffect(s: GameState, e: Effect, k = 1, reason = '', cat = 'life'): void {
-  if (e.bars) for (const [id, dv] of Object.entries(e.bars)) s.bars[id] = clamp((s.bars[id] ?? 0) + dv * k, 0, 100);
+  if (e.bars) for (const [id, dv] of Object.entries(e.bars)) s.bars[id] = (s.bars[id] ?? 0) + dv * k;
   if (e.accum) for (const [id, dv] of Object.entries(e.accum)) s.accum[id] = (s.accum[id] ?? 0) + dv * k;
   if (e.items) for (const [id, dv] of Object.entries(e.items)) s.items[id] = Math.max(0, (s.items[id] ?? 0) + dv * k);
   if (e.flags) for (const f of e.flags) s.flags[f] = true;
@@ -114,6 +118,11 @@ export function applyEffect(s: GameState, e: Effect, k = 1, reason = '', cat = '
     s.money += amount;
     s.ledger.push({ t: s.t, amount, reason: reason || '（未注明）', cat });
   }
+}
+
+/** 把各根条收回 0–100。 */
+export function clampBars(s: GameState): void {
+  for (const id of Object.keys(s.bars)) s.bars[id] = clamp(s.bars[id], 0, 100);
 }
 
 /** 心情等级。需要自律的行动在心情最低时被挡住。 */
@@ -316,11 +325,23 @@ export function objectMenu(
 /**
  * 行动会影响哪些条、往哪个方向：预览用，隐藏的条也列出。
  * 按当下的状态算（例如饮水机里的水没烧开过，喝下去体能会降），行动前就能看到确定的代价。
+ * 返回值的正负是方向，大小是快慢的档（1 起，箭头的个数）：持续的事按每小时的变化乘上此刻的倍率
+ * （例如睡眠质量，开着灯睡就少一档），一次性的按变化量；档位线由数据表给。
  */
-export function barPreview(s: GameState, a: ActionDef): Record<string, 1 | -1> {
-  const out: Record<string, 1 | -1> = {};
-  for (const e of [a.onStart, a.perHour, a.onEnd]) {
-    for (const [id, dv] of Object.entries(resolve(s, e)?.bars ?? {})) if (dv) out[id] = dv > 0 ? 1 : -1;
-  }
+export interface PreviewSteps {
+  perHour: readonly number[];
+  once: readonly number[];
+}
+
+export function barPreview(s: GameState, a: ActionDef, steps: PreviewSteps = { perHour: [], once: [] }): Record<string, number> {
+  const out: Record<string, number> = {};
+  const put = (id: string, dv: number, lines: readonly number[]) => {
+    if (!dv) return;
+    const n = 1 + lines.filter((x) => Math.abs(dv) >= x).length;
+    if (n > Math.abs(out[id] ?? 0)) out[id] = Math.sign(dv) * n;
+  };
+  for (const e of [a.onStart, a.onEnd]) for (const [id, dv] of Object.entries(resolve(s, e)?.bars ?? {})) put(id, dv, steps.once);
+  const rate = a.rate ? a.rate(s) : 1;
+  for (const [id, dv] of Object.entries(a.perHour?.bars ?? {})) put(id, dv * rate, steps.perHour);
   return out;
 }

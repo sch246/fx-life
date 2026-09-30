@@ -25,6 +25,7 @@ import { NOODLES, PACKETS, heat, n, quality, soak, stage } from '../data/noodles
 import { layerAt, layerOf, standAt, type Spot } from '../data/objects';
 import { CARRIED, carrying } from '../data/items';
 import { lampOn } from '../data/room';
+import { PREVIEW_STEPS } from '../data/bars';
 import { HAIR_COLOR, PERSON_PARTS, SKIN, outfit, pronoun } from '../data/person';
 import { CityView } from './window';
 
@@ -467,7 +468,9 @@ export class Scene {
         entry.kind === 'stop'
           ? ''
           : [
-              ...Object.entries(barPreview(s, a)).map(([id, d]) => `${names.get(id) ?? id}${d > 0 ? '↑' : '↓'}`),
+              ...Object.entries(barPreview(s, a, PREVIEW_STEPS)).map(
+                ([id, d]) => `${names.get(id) ?? id}${(d > 0 ? '↑' : '↓').repeat(Math.abs(d))}`,
+              ),
               a.minutes ? `${a.minutes} 分钟` : '',
             ]
               .filter(Boolean)

@@ -14,20 +14,24 @@ import { carrying } from './items';
 import { WATER, dispenserWater, drinkBars, fill, hotSource, k, pour, vessel, w } from './water';
 import { AUTO_NOODLES, NOODLES, NOODLE_ACTIONS, stage } from './noodles';
 
-const rested = (s: GameState) => (s.bars.energy ?? 0) >= 100;
 const starving = (s: GameState) => (s.bars.stamina ?? 0) < BODY.hungryWake;
-/** 房间太亮，睡不着（累垮了才顾不上亮不亮）。 */
-const tooBright = (s: GameState) => roomLight(s) > 0.6 && (s.bars.energy ?? 0) > 30;
+/** 欠着觉（精力不在最高一级）。 */
+const owed = (s: GameState) => (s.levels.energy ?? BODY.rested) < BODY.rested;
+/** 睡足了：精力满，而且不欠觉。 */
+const rested = (s: GameState) => (s.bars.energy ?? 0) >= 100 && !owed(s);
+/** 房间太亮，睡不着。累垮了、欠着觉，就顾不上亮不亮。 */
+const tooBright = (s: GameState) => roomLight(s) > 0.6 && (s.bars.energy ?? 0) > 30 && !owed(s);
 /**
  * 自然醒：睡饱了天亮就醒；没睡饱也挡不住晨光——房间够亮就先醒，不等补满。
  * 这样熬夜欠下的觉会带进第二天，而不是在醒来前自动还清。
  * 同一条规则也让白天睡不着：闭上眼睛，房间太亮，就起来了。
  * 光源自 data/room 的 roomLight，不是写死的起床时刻：以后夜班白天补觉，只要房间够暗就行。
- * 房间一直全暗（遮光窗帘）时，靠"躺够九小时"兜底，不会睡不醒。
+ * 欠着觉时，补满一次条只升回一级、条从一半接着补，所以会一直睡下去补觉，天亮也叫不醒。
+ * 房间一直全暗（遮光窗帘）时，靠"躺够九小时"兜底（欠着觉是十二小时），不会睡不醒。
  */
 const wakeUp = (s: GameState) => {
   const since = s.t - (s.ongoing?.start ?? s.t);
-  return (rested(s) && roomLight(s) > 0.2) || tooBright(s) || since >= 9 * 60 || starving(s);
+  return (rested(s) && roomLight(s) > 0.2) || tooBright(s) || since >= (owed(s) ? 12 : 9) * 60 || starving(s);
 };
 
 /** 躺在床上（还没睡）：睡觉要先躺下。 */
@@ -86,8 +90,8 @@ export const ACTIONS: readonly ActionDef[] = [
     object: 'bed',
     label: '躺下',
     temper: 'impulse',
-    // 净增约 +2/时（+6 − 基线 4）：白天不能睡时，躺着也能稍微歇过来一点。
-    perHour: { bars: { energy: 6, mood: 1 } },
+    // 躺着只让精力掉得慢一点（+3 − 基线 4 = 净 −1/时），补不上来：精力只有睡觉能补。
+    perHour: { bars: { energy: 3, mood: 1 } },
     stopLabel: '起来',
     pose: 'lie',
   },
