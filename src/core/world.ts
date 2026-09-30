@@ -25,7 +25,7 @@ export interface Content {
   reveals: readonly RevealRule[];
 }
 
-/** 推进一游戏分钟。返回 true 表示有需要注意的事（应打断快进）。 */
+/** 推进一游戏分钟。返回 true 表示发生了声明为打断快进的事。 */
 export function stepWorld(s: GameState, c: Content): boolean {
   s.t += 1;
   for (const b of c.bars) {
@@ -34,5 +34,5 @@ export function stepWorld(s: GameState, c: Content): boolean {
   stepOngoing(s, c.actions);
   const revealed = stepReveal(s, c.reveals);
   stepRecord(s);
-  return revealed !== null;
+  return revealed.some((id) => c.reveals.find((r) => r.id === id)?.interrupts === true);
 }

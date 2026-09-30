@@ -26,7 +26,7 @@ describe('显隐', () => {
     tick(s, rules, 30);
     expect(isVisible(s, 'bar:e')).toBe(false);
     s.bars.e = 80;
-    tick(s, rules, REVEAL_GAP_MIN);
+    tick(s, rules);
     expect(isVisible(s, 'bar:e')).toBe(true);
     expect(s.feed).toHaveLength(1);
   });
@@ -48,7 +48,7 @@ describe('显隐', () => {
     expect(isVisible(s, 'bar:e')).toBe(false);
   });
 
-  it('一次只浮现一个新元素', () => {
+  it('首次浮现的新元素按焦点排队，不同时争夺注意力', () => {
     const s = createState();
     const rules: RevealRule[] = [
       { id: 'a', showWhen: () => true },
@@ -60,6 +60,30 @@ describe('显隐', () => {
     expect(isVisible(s, 'b')).toBe(false);
     tick(s, rules);
     expect(isVisible(s, 'b')).toBe(true);
+  });
+
+  it('焦点安排不是数量禁令：见过的元素再浮现、focus: false 的元素都不排队', () => {
+    const s = createState();
+    let hungry = false;
+    const rules: RevealRule[] = [
+      { id: 'a', showWhen: () => true },
+      { id: 'bar:energy', showWhen: () => true, focus: false },
+      { id: 'bar:hunger', showWhen: () => hungry, hideWhen: () => !hungry },
+      { id: 'b', showWhen: () => true },
+    ];
+    s.reveal.seen['bar:hunger'] = true;
+    hungry = true;
+    tick(s, rules);
+    expect(['a', 'bar:energy', 'bar:hunger', 'b'].map((id) => isVisible(s, id))).toEqual([true, true, true, false]);
+  });
+
+  it('返回本分钟浮现的元素', () => {
+    const s = createState();
+    s.t += 1;
+    expect(stepReveal(s, [{ id: 'a', showWhen: () => true }, { id: 'q', showWhen: () => true, focus: false }])).toEqual([
+      'q',
+      'a',
+    ]);
   });
 
   it('没有消失条件的能力一直留着；依赖可失去条件的随条件消失', () => {
