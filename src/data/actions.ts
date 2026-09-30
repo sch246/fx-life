@@ -1,5 +1,5 @@
 // 行动数据表：每个行动是一行，写成条、钱、时间和长期积累的变化（见 core/rules）。
-// 动作能不能做由 temper、requires 等规则决定；所属物件据此上色或变灰。
+// 动作能不能做由 temper、requires、occupies 等规则决定；所属物件据此上色或变灰。
 // 数值是第一版初值，按试玩调。
 
 import type { ActionDef } from '../core/rules';
@@ -22,6 +22,7 @@ const SLEEP: Omit<ActionDef, 'id' | 'label'> = {
   stopLabel: '醒来',
   endLine: '醒了。',
   pose: 'sleep',
+  occupies: true,
 };
 
 export const ACTIONS: readonly ActionDef[] = [
@@ -47,18 +48,17 @@ export const ACTIONS: readonly ActionDef[] = [
   // 睡眠跳过：和睡觉是同一件事，只是开始后快进到醒来。出现条件见 data/reveals。
   { ...SLEEP, id: 'sleep-skip', label: '睡到醒', skip: true, requires: (s) => moodLv(s) >= 1, line: '躺下，一觉睡到醒。' },
   {
-    id: 'noodles',
+    // 行李箱近景里的桶面：一次拿一桶。
+    id: 'take-noodles',
     object: 'bag',
-    label: '吃泡面',
+    label: '拿一桶面',
     temper: 'impulse',
-    requires: (s) => (s.items.noodles ?? 0) > 0,
-    minutes: 15,
-    onStart: { items: { noodles: -1 } },
-    onEnd: { bars: { stamina: 55 } },
-    line: '泡了一包面。',
-    pose: 'eat',
+    requires: (s) => (s.items.noodles ?? 0) > 0 && (s.items.cup ?? 0) < 1,
+    onStart: { items: { noodles: -1, cup: 1 } },
+    line: '从箱子里拿出一桶面。',
   },
   {
+    // 行李箱近景里的衣服：心情到 lv1 后才浮现，需要自律。
     id: 'unpack',
     object: 'bag',
     label: '整理行李',
@@ -69,17 +69,30 @@ export const ACTIONS: readonly ActionDef[] = [
     line: '把行李里的东西一件件拿出来。',
     endLine: '东西都放好了。',
   },
+  {
+    id: 'boil-noodles',
+    object: 'kettle',
+    label: '烧水泡面',
+    temper: 'impulse',
+    requires: (s) => (s.items.cup ?? 0) > 0,
+    minutes: 15,
+    onStart: { items: { cup: -1 } },
+    onEnd: { bars: { stamina: 55 } },
+    line: '烧上水，撕开面盖。',
+    endLine: '一桶面吃完了。',
+    pose: 'eat',
+  },
   ...MESSAGES.map(
     (m): ActionDef => ({
       id: `reply-${m.id}`,
       object: 'phone',
-      label: `回复${m.from}`,
+      label: m.reply,
       temper: 'impulse',
       requires: (s) => !!s.flags[`msg:${m.id}`] && !s.flags[`replied:${m.id}`],
       minutes: 5,
       onStart: { flags: [`replied:${m.id}`] },
       onEnd: { bars: { mood: m.mood } },
-      line: `${m.from}：「${m.text}」你回：「${m.reply}」`,
+      pose: 'phone',
     }),
   ),
   {

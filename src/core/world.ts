@@ -20,12 +20,16 @@ export interface Drift {
  * 条满时升一级、见底时降一级，然后从 upTo / downTo 重新开始，中间留出余地，不会来回跳。
  */
 export interface LevelDef {
+  /** 开局等级。 */
+  start: number;
   max: number;
   upTo: number;
   downTo: number;
   /** 到达某一级时写进事件流的话（键是到达的等级）。 */
   upLines?: Record<number, string>;
   downLines?: Record<number, string>;
+  /** 各级条的粗细（px）与颜色：玩家靠这个发现条有等级，不写成文字标签。 */
+  styles?: readonly { thickness: number; color: string }[];
 }
 
 /** 状态条数据表的一行。 */

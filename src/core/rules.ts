@@ -59,6 +59,8 @@ export interface ActionDef {
   skip?: boolean;
   /** 角色在做这件事时的姿势，场景据此绘制。 */
   pose?: string;
+  /** 身体被这件事占住（例如睡着）：做它的时候别的事都做不了，只能先停下它。 */
+  occupies?: boolean;
 }
 
 export const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
@@ -81,17 +83,29 @@ export const moodLv = (s: GameState) => s.levels.mood ?? 0;
 
 /** 为什么现在不能做这件事；能做时返回 null。 */
 export function blockedReason(s: GameState, a: ActionDef, lowMoodLv = 0): string | null {
+  if (s.ongoing?.occupies && s.ongoing.actionId !== a.id) return 'busy';
   if (moodLv(s) <= lowMoodLv && a.temper === 'discipline') return 'mood';
   if (a.requires && !a.requires(s)) return 'requires';
   return null;
 }
 
 /**
- * 物件能不能用：它身上至少有一个当前不被规则挡住的行动。
+ * 物件能不能用：它身上至少有一个当前不被规则挡住的行动，或者正在做的事就在它身上（可以停下）。
+ * 可以打开来看的物件（行李箱、手机）只要身体没被占住就能用。
  * 物件始终在房间里，不出现也不消失；能用时染上颜色，不能用时是灰的。
- * 例如门上的「出门」需要自律，心情最低时被挡住，门就是灰的。这不是门的特例，是同一条规则。
+ * 例如门上的「出门」需要自律，心情最低时被挡住，门就是灰的；睡着时除了床，别的都是灰的。
+ * 这些都不是特例，是同一条规则。
  */
-export function objectAvailable(s: GameState, actions: readonly ActionDef[], objectId: string, lowMoodLv = 0): boolean {
+export function objectAvailable(
+  s: GameState,
+  actions: readonly ActionDef[],
+  objectId: string,
+  viewable = false,
+  lowMoodLv = 0,
+): boolean {
+  const cur = s.ongoing && actions.find((a) => a.id === s.ongoing!.actionId);
+  if (cur && cur.object === objectId) return true;
+  if (viewable && !s.ongoing?.occupies) return true;
   return actions.some((a) => a.object === objectId && blockedReason(s, a, lowMoodLv) === null);
 }
 
@@ -103,6 +117,7 @@ export function startAction(s: GameState, a: ActionDef): void {
   if (a.line) say(s, a.line);
   if (isOngoing(a)) {
     s.ongoing = { actionId: a.id, start: s.t, until: a.minutes === undefined ? undefined : s.t + a.minutes };
+    if (a.occupies) s.ongoing.occupies = true;
   } else if (a.onEnd) {
     applyEffect(s, a.onEnd, 1, a.reason ?? a.label, a.cat);
   }

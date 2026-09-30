@@ -1,26 +1,15 @@
 import { Clock } from './core/clock';
-import { createState } from './core/state';
 import { stepWorld } from './core/world';
-import { revealNow, isVisible } from './core/reveal';
-import { objectMenu, startAction, stopOngoing, stepCues, type MenuEntry } from './core/rules';
-import { CONTENT, DEMO_END_FLAG } from './data';
+import { isVisible } from './core/reveal';
+import { blockedReason, objectAvailable, objectMenu, startAction, stopOngoing, type ActionDef, type MenuEntry } from './core/rules';
+import { CONTENT, DEMO_END_FLAG, newGame } from './data';
 import { OBJECTS } from './data/objects';
-import { START_MOOD_LV } from './data/mood';
-import { START_ITEMS } from './data/cues';
-import { REVEALED_AT_START } from './data/reveals';
 import { Scene } from './scene/scene';
 
 // 试玩调试用：?speed=10 让时间走快 10 倍。正式体验不带参数。
 const speed = Number(new URLSearchParams(location.search).get('speed')) || 1;
 
-const state = createState({
-  levels: { mood: START_MOOD_LV },
-  bars: Object.fromEntries(CONTENT.bars.map((b) => [b.id, b.initial])),
-  items: START_ITEMS,
-});
-revealNow(state, REVEALED_AT_START);
-stepCues(state, CONTENT.cues ?? []);
-
+const state = newGame();
 const clock = new Clock(() => stepWorld(state, CONTENT));
 const startedAt = performance.now();
 let endedText: string | null = null;
@@ -29,15 +18,21 @@ let endedText: string | null = null;
 const gated = new Set(CONTENT.reveals.map((r) => r.id));
 const actionVisible = (id: string) => !gated.has(`act:${id}`) || isVisible(state, `act:${id}`);
 
+function begin(a: ActionDef): void {
+  if (clock.paused || blockedReason(state, a) !== null) return;
+  clock.interrupt();
+  startAction(state, a);
+  if (a.skip) clock.setFastForward(true);
+}
+
 function choose(entry: MenuEntry): void {
   if (clock.paused || !entry.enabled) return;
-  clock.interrupt();
   if (entry.kind === 'stop') {
+    clock.interrupt();
     stopOngoing(state);
     return;
   }
-  startAction(state, entry.action);
-  if (entry.action.skip) clock.setFastForward(true);
+  begin(entry.action);
 }
 
 const scene = new Scene(document.getElementById('app')!, CONTENT, OBJECTS, {
@@ -45,14 +40,26 @@ const scene = new Scene(document.getElementById('app')!, CONTENT, OBJECTS, {
     if (!endedText) clock.setPaused(!clock.paused);
   },
   clickObject: (id) => {
-    // 暂停时可以查看，不能行动。
+    // 暂停时可以查看，不能行动。点物件只是打开它，不直接替玩家做事。
     if (clock.paused) return;
-    const entries = objectMenu(state, CONTENT.actions, id, actionVisible);
-    // 日常行动点一次；需要选的点两次。
-    if (entries.length === 1 && entries[0].enabled) choose(entries[0]);
-    else if (entries.length > 0) scene.showMenu(id, entries);
+    const obj = OBJECTS.find((o) => o.id === id)!;
+    const view = obj.view ?? 'menu';
+    if (view !== 'menu') {
+      if (objectAvailable(state, CONTENT.actions, id, true)) scene.openView(view, id);
+      return;
+    }
+    scene.closeView();
+    scene.showMenu(id, objectMenu(state, CONTENT.actions, id, actionVisible));
   },
   chooseEntry: choose,
+  doAction: (id) => {
+    const a = CONTENT.actions.find((x) => x.id === id);
+    if (!a) return;
+    begin(a);
+    // 在近景里开始一件要花时间的事（整理行李），就合上近景去做。
+    const view = OBJECTS.find((o) => o.id === a.object)?.view;
+    if (view === 'closeup' && state.ongoing?.actionId === a.id) scene.closeView();
+  },
   restart: () => location.reload(),
 });
 
@@ -61,6 +68,7 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
     clock.setPaused(!clock.paused);
   }
+  if (e.code === 'Escape') scene.closeView();
 });
 
 let last = performance.now();

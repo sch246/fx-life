@@ -18,13 +18,20 @@ export const REVEALS: readonly RevealRule[] = [
     showWhen: (s) => s.bars.stamina < 50,
     hideWhen: (s) => s.bars.stamina >= 80,
     holdMinutes: 20,
-    firstLine: '肚子饿了。',
+    firstLine: '肚子饿了。箱子里还带着几桶面。',
   },
   {
     // 心情不会一直显示：接近升级或降级时浮现，变化过去后淡出。
     id: 'bar:mood',
     showWhen: (s) => s.bars.mood >= 75 || (moodLv(s) > 0 && s.bars.mood <= 25),
     hideWhen: (s) => s.bars.mood > 30 && s.bars.mood < 70,
+    holdMinutes: 120,
+  },
+  {
+    // 体能不会一直显示：透支或攒满、接近变级时浮现。
+    id: 'bar:fitness',
+    showWhen: (s) => s.bars.fitness <= 25 || s.bars.fitness >= 85,
+    hideWhen: (s) => s.bars.fitness > 30 && s.bars.fitness < 80,
     holdMinutes: 120,
   },
   // 升到 lv1 后浮现的新动作。发现后一直留着。

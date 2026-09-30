@@ -23,6 +23,8 @@ export interface Ongoing {
   start: number;
   /** 预定结束时间；undefined 表示直到被打断或手动停止。 */
   until?: number;
+  /** 身体被这件事占住（例如睡着）：别的事都做不了，只能先停下它。 */
+  occupies?: boolean;
 }
 
 export interface GameState {
