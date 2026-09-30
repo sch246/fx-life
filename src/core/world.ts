@@ -5,7 +5,7 @@ import type { GameState } from './state';
 import type { ActionDef, CueDef, Effect, Predicate } from './rules';
 import type { RevealRule } from './reveal';
 import type { SkillDef } from './skills';
-import { applyEffect, startAction, stepCues, stepOngoing } from './rules';
+import { applyEffect, startAction, stepCues, stepOngoing, stepTasks } from './rules';
 import { stepReveal } from './reveal';
 import { stepRecord } from './record';
 import { say } from './feed';
@@ -117,6 +117,7 @@ export function stepWorld(s: GameState, c: Content): void {
   applyEffect(s, { bars: delta }, 1 / 60);
   for (const p of c.processes ?? []) p.step(s);
   stepOngoing(s, c.actions);
+  stepTasks(s, c.actions);
   for (const b of c.bars) stepLevels(s, b);
   stepCues(s, c.cues ?? []);
   stepReveal(s, c.reveals);

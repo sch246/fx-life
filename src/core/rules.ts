@@ -79,6 +79,12 @@ export interface ActionDef {
   hands?: boolean;
   /** 自动：小人自己把这件事做完，玩家不用盯着。手动做熟之后出现在技能栏里，不在物件的菜单里。 */
   auto?: boolean;
+  /**
+   * 在后台进行：开个头（例如接水、打开开关）就不用守着，小人可以去做别的事，别的事也不会把它打断；
+   * stopWhen 成立时小人顺手收尾（onEnd，例如关掉开关）。身体被占住（睡着）时收不了尾，要等醒来。
+   * 开头那一下和别的事一样要走过去，会停下手上正在做的事。
+   */
+  background?: boolean;
 }
 
 export const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
@@ -104,6 +110,7 @@ export const moodLv = (s: GameState) => s.levels.mood ?? 0;
 /** 为什么现在不能做这件事；能做时返回 null。 */
 export function blockedReason(s: GameState, a: ActionDef, lowMoodLv = 0): string | null {
   if (s.ongoing?.occupies && s.ongoing.actionId !== a.id) return 'busy';
+  if (a.background && s.tasks.some((t) => t.actionId === a.id)) return 'running';
   if (moodLv(s) <= lowMoodLv && a.temper === 'discipline') return 'mood';
   if (a.requires && !a.requires(s)) return 'requires';
   return null;
@@ -150,7 +157,9 @@ export function startAction(s: GameState, a: ActionDef): void {
   const start = resolve(s, a.onStart);
   if (start) applyEffect(s, start, 1, a.reason ?? a.label, a.cat);
   if (line) say(s, line);
-  if (isOngoing(a)) {
+  if (a.background) {
+    s.tasks.push({ actionId: a.id, start: s.t });
+  } else if (isOngoing(a)) {
     s.ongoing = { actionId: a.id, start: s.t, until: a.minutes === undefined ? undefined : s.t + a.minutes };
     if (occupiesAt(s, a, 0)) s.ongoing.occupies = true;
   } else {
@@ -159,8 +168,8 @@ export function startAction(s: GameState, a: ActionDef): void {
   }
 }
 
-function finish(s: GameState, a: ActionDef): void {
-  s.ongoing = null;
+function finish(s: GameState, a: ActionDef, foreground = true): void {
+  if (foreground) s.ongoing = null;
   const line = text(s, a.endLine);
   const end = resolve(s, a.onEnd);
   if (end) applyEffect(s, end, 1, a.reason ?? a.label, a.cat);
@@ -186,6 +195,29 @@ export function stepOngoing(s: GameState, actions: readonly ActionDef[]): void {
 export function stopOngoing(s: GameState): void {
   s.ongoing = null;
 }
+
+/** 推进后台的事一分钟：条件成立、身体又空着，就顺手收尾。 */
+export function stepTasks(s: GameState, actions: readonly ActionDef[]): void {
+  if (s.ongoing?.occupies) return;
+  for (const task of [...s.tasks]) {
+    const a = actions.find((x) => x.id === task.actionId);
+    if (a?.stopWhen && !a.stopWhen(s)) continue;
+    s.tasks = s.tasks.filter((t) => t !== task);
+    if (a) finish(s, a, false);
+  }
+}
+
+/** 提前结束后台的这件事：现在就收尾（例如水还没开就关掉开关）。 */
+export function stopTask(s: GameState, actions: readonly ActionDef[], actionId: string): void {
+  const a = actions.find((x) => x.id === actionId);
+  if (!s.tasks.some((t) => t.actionId === actionId)) return;
+  s.tasks = s.tasks.filter((t) => t.actionId !== actionId);
+  if (a) finish(s, a, false);
+}
+
+/** 这件事正在做：前台或者后台。 */
+export const running = (s: GameState, actionId: string) =>
+  s.ongoing?.actionId === actionId || s.tasks.some((t) => t.actionId === actionId);
 
 /** 世界里自己发生的事：条件第一次成立时生效一次（来消息、天黑、东西快用完）。 */
 export interface CueDef {

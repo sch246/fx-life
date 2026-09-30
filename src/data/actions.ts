@@ -111,19 +111,20 @@ export const ACTIONS: readonly ActionDef[] = [
     line: '把水倒进饮水机。',
   },
   {
-    // 会烧水之后：小人自己接满水、守着、水开了就关掉。
+    // 会烧水之后：小人自己接满水、打开开关，然后去做别的；水开了顺手关掉。
+    // 开关已经被关掉（亲手关的）也就不用管了。
     id: 'auto-boil',
     object: 'kettle',
     label: '烧水',
     temper: 'impulse',
     auto: true,
+    background: true,
     requires: (s) => learned(s, 'boil') && !k(s, 'broken') && !k(s, 'on'),
     onStart: (s): Effect => ({ set: { ...fill(s, 'kettle').set, 'kettle.on': 1 } }),
-    stopWhen: (s) => k(s, 'temp') >= 100 || !!k(s, 'broken'),
+    stopWhen: (s) => !k(s, 'on') || k(s, 'temp') >= 100 || !!k(s, 'broken'),
     onEnd: { set: { 'kettle.on': 0 } },
-    stopLabel: '不等了',
-    line: '接上一壶水，守在水壶边等它开。',
-    pose: 'kettle',
+    line: '接上一壶水，打开开关。',
+    endLine: (s) => (!k(s, 'on') ? '' : k(s, 'temp') >= 100 ? '顺手把水壶关了。' : '把水壶关了。'),
   },
   // ---- 泡面：放在小桌上一步步做，见 data/noodles ----
   ...NOODLE_ACTIONS,

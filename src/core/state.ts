@@ -27,6 +27,12 @@ export interface Ongoing {
   occupies?: boolean;
 }
 
+/** 在后台进行的事（例如自动烧水）：开了头，小人就去做别的，条件成立时顺手收尾。 */
+export interface Task {
+  actionId: string;
+  start: number;
+}
+
 export interface GameState {
   version: number;
   seed: number;
@@ -49,6 +55,7 @@ export interface GameState {
   /** 各物件上一次给「手动」心情的时间，防止反复点同一件事刷心情。 */
   cooldowns: Record<string, number>;
   ongoing: Ongoing | null;
+  tasks: Task[];
   reveal: RevealState;
   feed: FeedLine[];
   ledger: LedgerEntry[];
@@ -82,6 +89,7 @@ export function createState(o: NewStateOptions = {}): GameState {
     things: { ...(o.things ?? {}) },
     cooldowns: {},
     ongoing: null,
+    tasks: [],
     reveal: { visible: {}, seen: {}, hideSince: {} },
     feed: [],
     ledger: [],

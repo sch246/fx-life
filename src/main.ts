@@ -1,6 +1,6 @@
 import { Clock } from './core/clock';
 import { perform, stepWorld } from './core/world';
-import { blockedReason, objectAvailable, stopOngoing, type ActionDef, type MenuEntry } from './core/rules';
+import { blockedReason, objectAvailable, stopOngoing, stopTask, type ActionDef, type MenuEntry } from './core/rules';
 import { CONTENT, DEMO_END_FLAG, newGame } from './data';
 import { OBJECTS } from './data/objects';
 import { Scene } from './scene/scene';
@@ -22,8 +22,16 @@ function begin(a: ActionDef): boolean {
   return true;
 }
 
-function stop(): void {
-  if (clock.paused || !state.ongoing) return;
+function stop(actionId?: string): void {
+  if (clock.paused) return;
+  if (actionId && state.ongoing?.actionId !== actionId) {
+    // 后台的事提前收尾（例如水没开就关掉开关）：要腾得出身来，睡着时不行。
+    if (state.ongoing?.occupies) return;
+    clock.interrupt();
+    stopTask(state, CONTENT.actions, actionId);
+    return;
+  }
+  if (!state.ongoing) return;
   clock.interrupt();
   stopOngoing(state);
 }
@@ -38,7 +46,7 @@ const scene = new Scene(document.getElementById('app')!, CONTENT, OBJECTS, {
     if (!endedText) clock.setPaused(!clock.paused);
   },
   clickObject: (id) => {
-    // 点能打开来看的物件（行李箱、水壶、桌上的面、手机）：打开它。暂停时不打开，只能看。
+    // 点能打开来看的物件（行李箱、水壶、桌上的面、手机）：打开它（手机再点一下放下）。暂停时不打开，只能看。
     // 有菜单的物件由场景直接弹出菜单，选了才做事。
     if (clock.paused) return;
     const obj = OBJECTS.find((o) => o.id === id)!;
@@ -68,6 +76,7 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
     clock.setPaused(!clock.paused);
   }
+  // Esc：先合上近景，再放下没固定的手机。
   if (e.code === 'Escape') scene.closeView();
 });
 

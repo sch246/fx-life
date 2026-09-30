@@ -1,8 +1,9 @@
 // 场景：房间、窗户、角色、物件、状态条、技能栏、事件流和暂停的绘制与点击。
 // 只读状态、只通过回调发出意图；不直接改状态，规则留在 core/。
 // 条的淡入淡出靠切换 .shown 类；物件常驻，靠切换 .available 类在灰与上色之间过渡。
-// 点物件只是打开它：弹出能做的事（menu），凑近看（closeup），或者在右侧打开屏幕（screen）。
+// 点物件只是打开它：弹出能做的事（menu），凑近看（closeup），或者在右侧拿起手机（screen）。
 // 菜单和近景里只列现在能做的事；鼠标移到物件上就弹出菜单，少点一下。
+// 近景和手机都没有「离开」按钮：点它们四周就合上。手机可以用图钉固定，固定着就一直拿在手上，边看边做别的。
 // 做物件上的事时，角色走到物件跟前；点地板，角色在地板上走过去（左右和前后）。
 // 地板上的东西按远近排前后（data/objects 的 layerOf）。夜里房间变暗是给墙、地板、物件和角色降亮度，窗外不受影响。
 // 角色站在哪只是画面，不影响规则。
@@ -13,7 +14,7 @@ import type { ActionDef, MenuEntry } from '../core/rules';
 import type { SkillDef } from '../core/skills';
 import type { ObjectDef } from '../data/objects';
 import { isVisible } from '../core/reveal';
-import { barPreview, blockedReason, objectAvailable, objectMenu, poseOf } from '../core/rules';
+import { barPreview, blockedReason, objectAvailable, objectMenu, poseOf, running } from '../core/rules';
 import { learned, skillProgress } from '../core/skills';
 import { daylight, stamp, hm } from '../core/time';
 import { MESSAGES } from '../data/messages';
@@ -28,14 +29,16 @@ export interface SceneIntents {
   chooseEntry(entry: MenuEntry): void;
   /** 在近景、屏幕或技能栏里点了某件事。开始了返回 true。 */
   doAction(actionId: string): boolean;
-  /** 停下正在做的事。 */
-  stop(): void;
+  /** 停下正在做的事；给了 id 就停下那一件（可能在后台）。 */
+  stop(actionId?: string): void;
   /** 点了地板：能走过去返回 true（睡着时、暂停时不能）。 */
   walk(): boolean;
   restart(): void;
 }
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+const PIN_SVG =
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 2.5h6l-1.2 6.2 3.7 3.6v2.2h-4.3V21L12 22.5 10.8 21v-6.5H6.5v-2.2l3.7-3.6z" fill="currentColor"/></svg>';
 const CONFETTI = ['#f5d36b', '#e88a5b', '#8fb3a0', '#9cc3ff', '#e5484d', '#f3efe6'];
 
 function levelStyle(b: BarDef, s: GameState) {
@@ -69,9 +72,14 @@ export class Scene {
   private readonly actions: Map<string, ActionDef>;
   private readonly skills: readonly SkillDef[];
   private feedCount = 0;
-  private view: { kind: 'closeup' | 'screen'; id: string } | null = null;
+  /** 凑近在看的东西。 */
+  private closeupId: string | null = null;
+  /** 手机拿在手上；固定着的不会因为走开、点别处而放下。 */
+  private phoneOpen = false;
+  private phonePinned = false;
   private phoneApp: 'home' | 'chat' = 'home';
   private lastViewKey = '';
+  private lastPhoneKey = '';
   private lastSkillsKey = '';
   private panelSkill: string | null = null;
   private panelKey = '';
@@ -157,13 +165,13 @@ export class Scene {
       intents.clickObject('table');
     });
     $('.restart').addEventListener('click', () => intents.restart());
-    // 点房间里空的地方：收起菜单和手机。点到房间外面（页面四周、状态条、事件流），近景也合上。
+    // 点房间里空的地方：收起菜单，放下手机。点到房间外面（页面四周、状态条、事件流），近景也合上。
     this.room.addEventListener('click', () => this.dismiss());
     document.addEventListener('click', (e) => {
       const t = e.target as HTMLElement;
       if (!t.closest('.room') && !t.closest('.top')) {
         this.dismiss();
-        this.closeView();
+        this.closeCloseup();
       }
     });
     // 点地板：角色走过去，左右、前后都能走。
@@ -187,27 +195,27 @@ export class Scene {
       if (this.menuFor && this.menuByHover && !t.closest('.menu') && !t.closest(`.obj-${this.menuFor}`)) this.hideMenuSoon();
     });
 
-    // 近景和屏幕里的点击都走事件委托：data-act 做事，data-open 换成另一个近景，data-nav 切换界面，data-close 关掉。
-    // 点近景四周空着的地方（背景）也会关掉。
-    for (const el of [this.closeup, this.phone]) {
-      el.addEventListener('click', (e) => {
-        const target = e.target as HTMLElement;
-        if (target === el || target.dataset.backdrop !== undefined) return this.closeView();
-        const t = target.closest<HTMLElement>('[data-act],[data-open],[data-nav],[data-close]');
-        if (!t || (t as HTMLButtonElement).disabled) return;
-        if (t.dataset.close !== undefined) return this.closeView();
-        if (t.dataset.nav) {
-          this.phoneApp = t.dataset.nav as 'home' | 'chat';
-          this.lastViewKey = '';
-          return;
-        }
-        if (t.dataset.act && !this.act(t.dataset.act)) return;
-        if (t.dataset.open) this.openView('closeup', t.dataset.open);
-        this.lastViewKey = '';
-      });
-    }
+    // 近景和手机里的点击都走事件委托：data-act 做事，data-open 换成另一个近景，data-nav 切换界面，data-pin 固定手机。
+    // 点近景四周空着的地方（背景）就合上。
+    this.closeup.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      if (target === this.closeup || target.dataset.backdrop !== undefined) return this.closeCloseup();
+      const t = target.closest<HTMLElement>('[data-act],[data-open]');
+      if (!t || (t as HTMLButtonElement).disabled) return;
+      if (t.dataset.act && !this.act(t.dataset.act)) return;
+      if (t.dataset.open) this.openView('closeup', t.dataset.open);
+      this.lastViewKey = '';
+    });
+    this.phone.addEventListener('click', (e) => {
+      const t = (e.target as HTMLElement).closest<HTMLElement>('[data-act],[data-nav],[data-pin]');
+      if (!t || (t as HTMLButtonElement).disabled) return;
+      if (t.dataset.pin !== undefined) this.phonePinned = !this.phonePinned;
+      else if (t.dataset.nav) this.phoneApp = t.dataset.nav as 'home' | 'chat';
+      else if (t.dataset.act) this.act(t.dataset.act);
+      this.lastPhoneKey = '';
+    });
 
-    // 技能栏：鼠标移上去就在旁边显示怎样才算会、学到哪了；学会了就一点即做（再点停下）。
+    // 技能栏：鼠标移上去就在旁边显示怎样才算会、学到哪了；学会了就一点即做（做着时再点，提前收尾）。
     // 触屏上没有悬浮，还在学时点一下也能看。
     this.skillsEl.addEventListener('pointerover', (e) => {
       const t = (e.target as HTMLElement).closest<HTMLElement>('[data-skill]');
@@ -223,7 +231,7 @@ export class Scene {
       const sk = this.skills.find((x) => x.id === t.dataset.skill)!;
       this.hideMenu();
       if (!learned(this.state, sk)) return this.showSkillPanel(this.panelSkill === sk.id ? null : sk.id);
-      if (this.state.ongoing?.actionId === sk.auto) this.intents.stop();
+      if (running(this.state, sk.auto)) this.intents.stop(sk.auto);
       else this.act(sk.auto);
       this.lastSkillsKey = '';
     });
@@ -284,9 +292,10 @@ export class Scene {
     if (p) this.moveTo(p);
   }
 
-  /** 走到某处：走得越远用时越久（只是画面，不花游戏时间）。 */
+  /** 走到某处：走得越远用时越久（只是画面，不花游戏时间）。起身走开就放下没固定的手机。 */
   private moveTo(p: Spot): void {
     if (p.x === this.spot.x && p.y === this.spot.y) return;
+    this.putDownPhone();
     const d = Math.hypot(p.x - this.spot.x, (p.y - this.spot.y) * 1.6);
     this.character.style.setProperty('--walk', `${Math.min(1.4, Math.max(0.25, d * 0.028)).toFixed(2)}s`);
     this.spot = { ...p };
@@ -295,7 +304,7 @@ export class Scene {
   private dismiss(): void {
     this.hideMenu();
     this.panelSkill = null;
-    if (this.view?.kind === 'screen') this.closeView();
+    this.putDownPhone();
   }
 
   private openMenu(objectId: string, byHover: boolean): void {
@@ -374,15 +383,34 @@ export class Scene {
     this.menu.hidden = true;
   }
 
+  /** 凑近看一样东西，或者拿起手机（再点一下手机就放下）。凑近别的东西时，没固定的手机先放下。 */
   openView(kind: 'closeup' | 'screen', id: string): void {
-    this.view = { kind, id };
-    this.phoneApp = 'home';
+    if (kind === 'screen') {
+      if (this.phoneOpen) return this.putDownPhone();
+      this.phoneOpen = true;
+      this.lastPhoneKey = '';
+      return;
+    }
+    this.closeupId = id;
+    this.lastViewKey = '';
+    this.putDownPhone();
+  }
+
+  /** 合上近景；没有近景时放下没固定的手机。 */
+  closeView(): void {
+    if (this.closeupId) this.closeCloseup();
+    else this.putDownPhone();
+  }
+
+  private closeCloseup(): void {
+    this.closeupId = null;
     this.lastViewKey = '';
   }
 
-  closeView(): void {
-    this.view = null;
-    this.lastViewKey = '';
+  private putDownPhone(): void {
+    if (!this.phoneOpen || this.phonePinned) return;
+    this.phoneOpen = false;
+    this.lastPhoneKey = '';
   }
 
   private canDo(s: GameState, id: string): boolean {
@@ -401,8 +429,8 @@ export class Scene {
   }
 
   private renderCloseup(s: GameState): void {
-    if (this.view?.id === 'kettle') return this.renderKettle(s);
-    if (this.view?.id === 'table') return this.renderNoodle(s);
+    if (this.closeupId === 'kettle') return this.renderKettle(s);
+    if (this.closeupId === 'table') return this.renderNoodle(s);
     const count = s.items.noodles ?? 0;
     const onTable = stage(s) > 0;
     const unpack = this.shown(s, 'unpack') && this.canDo(s, 'unpack');
@@ -422,8 +450,7 @@ export class Scene {
       <div class="case">
         <div class="lid"><div class="lining"></div></div>
         <div class="base">${clothes}<div class="cups">${cups}</div></div>
-      </div>
-      <button type="button" class="cu-close" data-close>合上箱子</button>`;
+      </div>`;
   }
 
   private sideButtons(s: GameState, objectId: string): string {
@@ -441,7 +468,7 @@ export class Scene {
       this.closeup.innerHTML = `
         <div class="kv" data-backdrop>
           <div class="kv-kettle"><div class="kv-body"><i class="kv-water"></i><i class="kv-glow"></i><i class="kv-bubbles"></i></div><i class="kv-lid"></i><i class="kv-handle"></i><i class="kv-spout"></i><i class="kv-led"></i><i class="kv-steam"></i></div>
-          <div class="kv-side" data-backdrop>${note}${this.sideButtons(s, 'kettle')}<button type="button" class="cu-close" data-close>走开</button></div>
+          <div class="kv-side" data-backdrop>${note}${this.sideButtons(s, 'kettle')}</div>
         </div>`;
     }
     // 水位、温度、开关这些每分钟都在变，直接改样式，不重建按钮。
@@ -463,7 +490,7 @@ export class Scene {
    */
   private renderNoodle(s: GameState): void {
     const st = stage(s);
-    if (st === 0) return this.closeView();
+    if (st === 0) return this.closeCloseup();
     const acts = this.doable(s, 'table');
     const q = st === 6 ? quality(s) : -1;
     const needHot = st === 3 && !hotSource(s, NOODLES.water);
@@ -495,7 +522,6 @@ export class Scene {
           <div class="kv-side" data-backdrop>
             <p class="nv-note">${note}<small class="nv-timer"></small></p>
             ${acts.map((a) => `<button type="button" class="kv-btn" data-act="${a.id}">${esc(a.label)}</button>`).join('')}
-            <button type="button" class="cu-close" data-close>走开</button>
           </div>
         </div>`;
     }
@@ -508,13 +534,13 @@ export class Scene {
   private renderPhone(s: GameState): void {
     const arrived = MESSAGES.filter((m) => s.flags[`msg:${m.id}`]);
     const unread = arrived.filter((m) => !s.flags[`replied:${m.id}`]).length;
-    const key = `phone|${this.phoneApp}|${arrived.length}|${unread}|${arrived.map((m) => this.canDo(s, `reply-${m.id}`)).join()}`;
+    const key = `phone|${this.phoneApp}|${this.phonePinned}|${arrived.length}|${unread}|${arrived.map((m) => this.canDo(s, `reply-${m.id}`)).join()}`;
     const clock = this.phone.querySelector('.ph-time');
-    if (key === this.lastViewKey) {
+    if (key === this.lastPhoneKey) {
       if (clock) clock.textContent = hm(s.t);
       return;
     }
-    this.lastViewKey = key;
+    this.lastPhoneKey = key;
     const bar = `<div class="ph-bar"><span class="ph-time">${hm(s.t)}</span><span>▮▮▮ ▭</span></div>`;
     let body: string;
     if (this.phoneApp === 'home') {
@@ -538,7 +564,10 @@ export class Scene {
           ${input}
         </div>`;
     }
-    this.phone.innerHTML = `<div class="ph-frame">${bar}${body}<button type="button" class="ph-down" data-close>放下手机</button></div>`;
+    // 图钉：固定住，手机就一直拿在手上，走开、做别的事都不放下；再点一下取消。
+    const pinned = this.phonePinned;
+    const pin = `<button type="button" class="ph-pin${pinned ? ' on' : ''}" data-pin aria-pressed="${pinned}" title="${pinned ? '取消固定' : '固定手机，边看边做别的'}" aria-label="${pinned ? '取消固定' : '固定手机'}">${PIN_SVG}</button>`;
+    this.phone.innerHTML = `${pin}<div class="ph-frame">${bar}${body}</div>`;
   }
 
   /** 技能栏：第一次做某件事时出现它的按钮。还在学是虚线框和进度，学会了是实心的，正在自动做时在呼吸。 */
@@ -547,10 +576,10 @@ export class Scene {
     const rows = shownSkills.map((k) => {
       const p = skillProgress(s, k);
       const done = learned(s, k);
-      const running = s.ongoing?.actionId === k.auto;
-      const blocked = done && !running && !this.canDo(s, k.auto);
+      const busy = running(s, k.auto);
+      const blocked = done && !busy && !this.canDo(s, k.auto);
       const isNew = (this.fresh.get(k.id) ?? 0) > now;
-      return { k, p, done, running, blocked, isNew };
+      return { k, p, done, running: busy, blocked, isNew };
     });
     const key = rows.map((r) => `${r.k.id}:${r.p.have}/${r.p.need}:${r.done}:${r.running}:${r.blocked}:${r.isNew}`).join('|');
     if (key === this.lastSkillsKey) return this.renderSkillPanel(s);
@@ -585,7 +614,7 @@ export class Scene {
     if (key === this.panelKey) return;
     this.panelKey = key;
     if (learned(s, sk)) {
-      this.skillPanel.innerHTML = `<div class="sp-head"><b>${esc(sk.name)}</b><em>会了</em></div><p class="sp-foot">点一下，他就自己做完；做着的时候再点一下停下。</p>`;
+      this.skillPanel.innerHTML = `<div class="sp-head"><b>${esc(sk.name)}</b><em>会了</em></div><p class="sp-foot">点一下，他就自己做完；做着的时候再点一下，提前收尾。</p>`;
     } else {
       const p = skillProgress(s, sk);
       const conds = sk.conditions
@@ -689,15 +718,21 @@ export class Scene {
     this.character.style.setProperty('--y', `${this.spot.y}%`);
     this.character.style.setProperty('--s', (1 + (this.spot.y - 76) * 0.012).toFixed(3));
     this.character.style.zIndex = String(onBed ? layerOf('bed') + 1 : layerAt(this.spot.y));
-    this.character.dataset.pose = pose || (this.view?.kind === 'screen' ? 'phone' : '');
+    // 身体被占住（睡着）时，近景合上，手机放下；固定着的手机先收起来，醒了还在手上。
+    const busy = !!s.ongoing?.occupies;
+    if (busy) {
+      this.closeCloseup();
+      this.putDownPhone();
+    }
+    const phoneShown = this.phoneOpen && !busy;
+    this.character.dataset.pose = pose || (phoneShown ? 'phone' : '');
     this.renderMenu(s);
 
-    // 身体被占住（睡着）时，打开着的近景和屏幕都合上。
-    if (this.view && s.ongoing?.occupies) this.view = null;
-    if (this.view?.kind === 'closeup') this.renderCloseup(s);
-    if (this.view?.kind === 'screen') this.renderPhone(s);
-    this.closeup.hidden = this.view?.kind !== 'closeup';
-    this.phone.hidden = this.view?.kind !== 'screen';
+    if (this.closeupId) this.renderCloseup(s);
+    if (phoneShown) this.renderPhone(s);
+    this.closeup.hidden = !this.closeupId;
+    this.closeup.classList.toggle('beside-phone', phoneShown);
+    this.phone.hidden = !phoneShown;
 
     this.noticeProgress(s, now);
     this.renderSkills(s, now);

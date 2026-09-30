@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { GameState } from '../src/core/state';
 import { perform, stepWorld } from '../src/core/world';
 import { isVisible } from '../src/core/reveal';
-import { barPreview, blockedReason, keepsCurrent, objectAvailable, objectMenu, poseOf, type ActionDef } from '../src/core/rules';
+import { barPreview, blockedReason, keepsCurrent, objectAvailable, objectMenu, poseOf, running, stopTask, type ActionDef } from '../src/core/rules';
 import { learned } from '../src/core/skills';
 import { dispenserWater, hasHot, hotSource, k, w } from '../src/data/water';
 import { NOODLES, soakedFor, stage } from '../src/data/noodles';
@@ -289,6 +289,65 @@ describe('第一片走查', () => {
     expect(k(s, 'on')).toBe(0);
     expect(k(s, 'raw')).toBe(0);
     expect(k(s, 'temp')).toBeGreaterThanOrEqual(95);
+  });
+
+  describe('自动烧水在后台', () => {
+    const learnedBoil = () => {
+      const s = newGame(1);
+      s.accum['skill:boil'] = 2;
+      expect(learned(s, skill('boil'))).toBe(true);
+      return s;
+    };
+
+    it('开了头就去做别的；别的事打断不了它，水开了顺手关掉开关', () => {
+      const s = learnedBoil();
+      expect(tryDo(s, act('auto-boil'))).toBe(true);
+      expect(s.ongoing).toBeNull();
+      expect(running(s, 'auto-boil')).toBe(true);
+      expect(blockedReason(s, act('auto-boil'))).not.toBeNull();
+      // 烧着的时候去看窗外、再躺下：自动烧水还在。
+      expect(tryDo(s, act('look'))).toBe(true);
+      run(s, 2);
+      perform(s, CONTENT, act('lie'));
+      expect(running(s, 'auto-boil')).toBe(true);
+      run(s, 5);
+      expect(running(s, 'auto-boil')).toBe(false);
+      expect(k(s, 'on')).toBe(0);
+      expect(k(s, 'raw')).toBe(0);
+      expect(lyingDown(s)).toBe(true);
+      expect(s.feed.some((l) => l.text === '顺手把水壶关了。')).toBe(true);
+    });
+
+    it('提前收尾就是现在关掉；亲手关掉了它也就结束了', () => {
+      const s = learnedBoil();
+      perform(s, CONTENT, act('auto-boil'));
+      run(s, 2);
+      stopTask(s, CONTENT.actions, 'auto-boil');
+      expect(running(s, 'auto-boil')).toBe(false);
+      expect(k(s, 'on')).toBe(0);
+      expect(k(s, 'temp')).toBeLessThan(100);
+
+      perform(s, CONTENT, act('auto-boil'));
+      perform(s, CONTENT, act('kettle-off'));
+      run(s, 1);
+      expect(running(s, 'auto-boil')).toBe(false);
+    });
+
+    it('睡着了收不了尾：水一直烧着，醒来才关', () => {
+      const s = learnedBoil();
+      perform(s, CONTENT, act('auto-boil'));
+      perform(s, CONTENT, act('lie'));
+      perform(s, CONTENT, act('sleep'));
+      s.ongoing!.start -= 30; // 已经躺了半小时，这就睡着
+      run(s, 15);
+      expect(s.ongoing?.occupies).toBe(true);
+      expect(k(s, 'on')).toBe(1);
+      expect(running(s, 'auto-boil')).toBe(true);
+      s.ongoing = null; // 醒了
+      run(s, 1);
+      expect(k(s, 'on')).toBe(0);
+      expect(running(s, 'auto-boil')).toBe(false);
+    });
   });
 
   it('手动做事略微加心情，同一个物件一小时内只算一次', () => {

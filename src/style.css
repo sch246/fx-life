@@ -286,7 +286,7 @@ html, body {
   .kv { width: 100%; height: 100%; grid-template-columns: 0.8fr 1.2fr; gap: 3%; }
   .kv-kettle, .nv-scene { height: auto; width: 100%; }
   .kv-side { gap: 4px; max-height: 100%; overflow-y: auto; align-content: start; padding-top: 4px; }
-  .kv-btn, .cu-close { padding: 4px 8px; font-size: 12px; }
+  .kv-btn { padding: 4px 8px; font-size: 12px; }
   .nv-note { font-size: 12px; }
 }
 
@@ -436,30 +436,43 @@ button.clothes:disabled { filter: grayscale(1) brightness(0.6); cursor: default;
 }
 :hover > .tip, :focus-visible > .tip { opacity: 1; }
 .cu-note { margin: 0; color: var(--ink-dim); font-size: 13px; }
-.cu-close, .ph-down {
-  background: transparent;
-  color: var(--ink);
-  border: 1px solid #555;
-  border-radius: 6px;
-  padding: 5px 14px;
-  cursor: pointer;
-  font: inherit;
-  font-size: 13px;
-}
 
-/* 手机：在画面右侧拿起来。 */
+/* 手机：在画面右侧拿起来。固定着时和近景同时开，近景让到左边。 */
 .phone-screen {
+  --ph-w: min(250px, 46%);
   position: absolute;
-  z-index: 1000;
+  z-index: 1010;
   right: 3%;
-  top: 4%;
+  top: max(4%, 44px); /* 让开右上角的暂停 */
   bottom: 4%;
-  width: min(250px, 46%);
+  width: var(--ph-w);
 }
+.closeup.beside-phone { padding-right: calc(min(250px, 46%) + 5%); }
+.ph-pin {
+  position: absolute;
+  left: -10px;
+  top: -8px;
+  z-index: 1;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #3a3f48;
+  border-radius: 50%;
+  background: #1b1e25;
+  color: #8a909b;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+.ph-pin svg { width: 17px; height: 17px; transform: rotate(40deg); transition: transform 0.15s; }
+.ph-pin:hover { color: #e7e9ee; }
+.ph-pin.on { background: #e5484d; border-color: #e5484d; color: #fff; }
+.ph-pin.on svg { transform: none; }
 .ph-frame {
   height: 100%;
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto 1fr;
   gap: 6px;
   padding: 10px 10px 12px;
   border-radius: 22px;
@@ -509,7 +522,6 @@ button.clothes:disabled { filter: grayscale(1) brightness(0.6); cursor: default;
 .ph-send { cursor: pointer; }
 .ph-send b { background: #37a957; color: #fff; border-radius: 6px; padding: 3px 8px; font-weight: 500; font-size: 12px; }
 .ph-send:disabled { opacity: 0.6; cursor: default; }
-.ph-down { justify-self: center; color: #aab0bb; border-color: #3a3f48; }
 
 .end {
   position: absolute;
