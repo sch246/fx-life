@@ -3,7 +3,7 @@ import { perform, stepWorld } from './core/world';
 import { blockedReason, objectAvailable, stopOngoing, stopTask, type ActionDef, type MenuEntry } from './core/rules';
 import { CONTENT, DEMO_END_FLAG, newGame } from './data';
 import { OBJECTS } from './data/objects';
-import { debugEnabled, debugText } from './core/debug';
+import { debugEnabled, debugText } from './scene/debug';
 import { Scene } from './scene/scene';
 
 // 试玩调试用：?speed=10 让时间走快 10 倍。正式体验不带参数。

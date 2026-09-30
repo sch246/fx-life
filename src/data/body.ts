@@ -74,7 +74,7 @@ export interface BandDef {
   note: string;
   /** 这是"值得浮现"的带：第一个真实后果。 */
   reveal?: boolean;
-  /** 第一次浮现时事件流的话（慢变量可以不写，让等级变化自己说话）。 */
+  /** 第一次进入这个带时事件流的话（data/cues 据此派生；慢变量可以不写，让等级变化自己说话）。 */
   line?: string;
   /** 浮现后回到安全线以上/以下多久才淡出。 */
   hideAt?: number;

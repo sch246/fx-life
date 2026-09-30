@@ -22,3 +22,6 @@ export const sleepQuality = (s: GameState, r: RoomDef = ROOM) => Math.max(0.2, 1
 /** 躺下多久才睡着：安静、黑的房间里十分钟左右，光和声会让人更久睡不着。 */
 export const FALL_ASLEEP_MIN = 10;
 export const fallAsleepMin = (s: GameState, r: RoomDef = ROOM) => FALL_ASLEEP_MIN / sleepQuality(s, r);
+
+/** 睡着之后至少睡过这么久，亮光才叫得醒：白天小睡也能睡上一觉，不会刚闭眼就被照醒。 */
+export const LIGHT_WAKE_AFTER_MIN = 90;

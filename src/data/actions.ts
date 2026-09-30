@@ -9,15 +9,16 @@ import { moodLv } from '../core/rules';
 import { BODY } from './body';
 import { MESSAGES } from './messages';
 import { learned } from './skills';
-import { fallAsleepMin, roomLight, sleepQuality } from './room';
+import { LIGHT_WAKE_AFTER_MIN, fallAsleepMin, roomLight, sleepQuality } from './room';
 import { WATER, dispenserWater, drinkBars, fill, hotSource, k, pour, vessel, w } from './water';
 import { AUTO_NOODLES, NOODLES, NOODLE_ACTIONS, stage } from './noodles';
 
 const rested = (s: GameState) => (s.bars.energy ?? 0) >= 100;
 const starving = (s: GameState) => (s.bars.stamina ?? 0) < BODY.hungryWake;
 /**
- * 自然醒：睡饱了天亮就醒；没睡饱也挡不住晨光——房间够亮就先醒，不等补满。
+ * 自然醒：睡饱了天亮就醒；没睡饱也挡不住晨光——睡过一阵之后房间够亮就先醒，不等补满。
  * 这样熬夜欠下的觉会带进第二天，而不是在醒来前自动还清。
+ * 「睡过一阵」是睡着之后再睡 LIGHT_WAKE_AFTER_MIN：白天亮着也能小睡，只是补得慢。
  * 光源自 data/room 的 roomLight，不是写死的起床时刻：以后夜班白天补觉，只要房间够暗就行。
  * 房间一直全暗（遮光窗帘）时，靠"躺够九小时"兜底，不会睡不醒。
  */
@@ -25,7 +26,7 @@ const wakeUp = (s: GameState) => {
   const since = s.t - (s.ongoing?.start ?? s.t);
   return (
     (rested(s) && roomLight(s) > 0.2) ||
-    (roomLight(s) > 0.6 && (s.bars.energy ?? 0) > 30) ||
+    (roomLight(s) > 0.6 && (s.bars.energy ?? 0) > 30 && since >= fallAsleepMin(s) + LIGHT_WAKE_AFTER_MIN) ||
     since >= 9 * 60 ||
     starving(s)
   );
