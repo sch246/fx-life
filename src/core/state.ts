@@ -23,6 +23,8 @@ export interface Ongoing {
   start: number;
   /** 预定结束时间；undefined 表示直到被打断或手动停止。 */
   until?: number;
+  /** 开始时的新鲜感系数，结束时的效果按它打折。 */
+  posK?: number;
 }
 
 export interface GameState {
@@ -33,8 +35,8 @@ export interface GameState {
   t: number;
   /** 各根条，0–100。哪些条存在由 data/bars 决定。 */
   bars: Record<string, number>;
-  /** 心情等级 0–4：心死、半死、平常、快乐、幸福。 */
-  moodLv: number;
+  /** 有等级的条当前所在的等级，例如心情 0–4：心死、半死、平常、快乐、幸福。 */
+  levels: Record<string, number>;
   money: number;
   /** 长期积累：技能、回忆、纪念物计数等。 */
   accum: Record<string, number>;
@@ -42,6 +44,8 @@ export interface GameState {
   items: Record<string, number>;
   /** 一次性标记：发生过的事、已发出的消息等。 */
   flags: Record<string, true>;
+  /** 每个行动上次结束的时间（新鲜感）。 */
+  lastDone: Record<string, number>;
   ongoing: Ongoing | null;
   reveal: RevealState;
   feed: FeedLine[];
@@ -55,6 +59,7 @@ export interface NewStateOptions {
   t?: number;
   bars?: Record<string, number>;
   moodLv?: number;
+  levels?: Record<string, number>;
   money?: number;
   items?: Record<string, number>;
 }
@@ -67,11 +72,12 @@ export function createState(o: NewStateOptions = {}): GameState {
     rng: {},
     t,
     bars: { ...(o.bars ?? {}) },
-    moodLv: o.moodLv ?? 0,
+    levels: { mood: o.moodLv ?? 0, ...(o.levels ?? {}) },
     money: o.money ?? 0,
     accum: {},
     items: { ...(o.items ?? {}) },
     flags: {},
+    lastDone: {},
     ongoing: null,
     reveal: { visible: {}, seen: {}, hideSince: {} },
     feed: [],

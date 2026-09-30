@@ -61,12 +61,12 @@ describe('显隐', () => {
   it('没有消失条件的能力一直留着；依赖可失去条件的随条件消失', () => {
     const s = createState({ moodLv: 1 });
     const rules: RevealRule[] = [
-      { id: 'act:look', showWhen: (x) => x.moodLv >= 1 },
-      { id: 'act:skip', showWhen: (x) => x.moodLv >= 1, hideWhen: (x) => x.moodLv < 1 },
+      { id: 'act:look', showWhen: (x) => x.levels.mood >= 1 },
+      { id: 'act:skip', showWhen: (x) => x.levels.mood >= 1, hideWhen: (x) => x.levels.mood < 1 },
     ];
     tick(s, rules);
     expect([isVisible(s, 'act:look'), isVisible(s, 'act:skip')]).toEqual([true, true]);
-    s.moodLv = 0;
+    s.levels.mood = 0;
     tick(s, rules);
     expect([isVisible(s, 'act:look'), isVisible(s, 'act:skip')]).toEqual([true, false]);
   });
