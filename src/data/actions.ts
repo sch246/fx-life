@@ -49,6 +49,7 @@ const SLEEP: Omit<ActionDef, 'id' | 'label'> = {
   endLine: (s) => (!s.ongoing?.occupies && tooBright(s) ? '太亮了，睡不着。' : '醒了。'),
   // 躺下一会儿才睡着；睡着之前还能看看手机。
   occupies: (s, since) => since >= fallAsleepMin(s),
+  busyWhy: 'Zzz……',
   pose: (s) => (s.ongoing?.occupies ? 'sleep' : 'lie'),
 };
 
@@ -156,6 +157,7 @@ export const ACTIONS: readonly ActionDef[] = [
     auto: true,
     background: true,
     requires: (s) => learned(s, 'boil') && !k(s, 'broken') && !k(s, 'on'),
+    why: (s) => (k(s, 'broken') ? '水壶烧坏了。' : k(s, 'on') ? '水壶已经开着了。' : ''),
     onStart: (s): Effect => ({ set: { ...fill(s, 'kettle').set, 'kettle.on': 1 } }),
     stopWhen: (s) => !k(s, 'on') || k(s, 'temp') >= 100 || !!k(s, 'broken'),
     onEnd: { set: { 'kettle.on': 0 } },
@@ -167,6 +169,8 @@ export const ACTIONS: readonly ActionDef[] = [
   {
     ...AUTO_NOODLES,
     requires: (s) => learned(s, 'soak') && (s.items.noodles ?? 0) > 0 && stage(s) === 0 && !!hotSource(s, NOODLES.water),
+    why: (s) =>
+      (s.items.noodles ?? 0) <= 0 ? '箱子里没有面了。' : stage(s) !== 0 ? '桌上还有一桶。' : !hotSource(s, NOODLES.water) ? '没有热水。' : '',
   },
   // ---- 饮水机 ----
   {
@@ -176,6 +180,7 @@ export const ACTIONS: readonly ActionDef[] = [
     label: '喝一杯水',
     temper: 'impulse',
     requires: (s) => dispenserWater(s) >= WATER.glass - 0.001,
+    why: '饮水机里没水。',
     minutes: 2,
     onStart: (s) => ({
       things: { 'dispenser.water': -WATER.glass },

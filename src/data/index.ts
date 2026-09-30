@@ -20,6 +20,8 @@ export const CONTENT: Content = {
   skills: SKILLS,
   // 亲手做事会让心情略微好一点；同一个物件上的事一小时内只算一次，不能靠反复点来刷。
   manualBonus: { effect: { bars: { mood: 1 } }, cooldownMin: 60 },
+  // 点灰掉的物件时，小人说为什么不行。需要自律的事在心情最低时做不了，都是这一句。
+  moodWhy: (a) => `心情太差了，不想${a.label}。`,
 };
 
 /** 首片演示到这里结束：玩家第一次出门。 */

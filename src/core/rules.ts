@@ -42,6 +42,11 @@ export interface ActionDef {
   temper: Temper;
   /** 做这件事的前提。不满足时不可用。 */
   requires?: Predicate;
+  /**
+   * 前提不满足时，点它的人会听到的原因：小人说一句此刻看得见的事（「饮水机里没水。」）。
+   * 按当下的状态算；算出空字符串就是这件事说不出原因，看下一件。
+   */
+  why?: string | ((s: GameState) => string);
   /** 开始时一次性生效。 */
   onStart?: EffectLike;
   /** 持续期间每游戏小时的变化，按分钟摊开结算。 */
@@ -72,6 +77,8 @@ export interface ActionDef {
    * 可以随时间变：since 是这件事开始后过了多少分钟（例如躺下一会儿才睡着）。
    */
   occupies?: boolean | ((s: GameState, since: number) => boolean);
+  /** 被这件事占住身体时（睡着），点别的东西，小人的反应（「Zzz……」）。 */
+  busyWhy?: string;
   /**
    * 只用手、原地就能做（例如看手机回消息）：不起身，不打断正在做的事。
    * 这样的动作必须是一下就做完的（没有耗时）；身体被占住时照样做不了。
@@ -118,6 +125,30 @@ export function blockedReason(s: GameState, a: ActionDef, lowMoodLv = 0): string
   if (a.background && s.tasks.some((t) => t.actionId === a.id)) return 'running';
   if (moodLv(s) <= lowMoodLv && a.temper === 'discipline') return 'mood';
   if (a.requires && !a.requires(s)) return 'requires';
+  return null;
+}
+
+/**
+ * 为什么做不了，给人看的一句话（小人说出来）：按 blockedReason 的先后，在这几件事里找第一件说得出原因的。
+ * 身体被占住时是占住它的那件事的反应；心情太低做不了需要自律的事，用 mood 生成一句（数据表里写）；
+ * 前提不满足时是这件事自己的 why。都说不出就返回 null，不编原因。
+ */
+export function whyNot(
+  s: GameState,
+  actions: readonly ActionDef[],
+  candidates: readonly ActionDef[],
+  mood: (a: ActionDef) => string,
+): string | null {
+  const cur = s.ongoing && actions.find((a) => a.id === s.ongoing!.actionId);
+  for (const a of candidates) {
+    const r = blockedReason(s, a);
+    if (r === 'busy') return (cur && cur.busyWhy) || null;
+    if (r === 'mood') return mood(a);
+    if (r === 'requires' && a.why) {
+      const t = text(s, a.why);
+      if (t) return t;
+    }
+  }
   return null;
 }
 

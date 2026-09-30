@@ -72,6 +72,8 @@ export interface Content {
   cues?: readonly CueDef[];
   processes?: readonly ProcessDef[];
   manualBonus?: ManualBonus;
+  /** 心情太低、做不了需要自律的事时，小人说的那句话（见 core/rules 的 whyNot）。 */
+  moodWhy?: (a: ActionDef) => string;
   skills?: readonly SkillDef[];
 }
 

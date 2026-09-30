@@ -79,6 +79,8 @@ export const NOODLE_ACTIONS: readonly ActionDef[] = [
     label: '撕开包装',
     temper: 'impulse',
     requires: at(1),
+    // 小桌上的事都要先有一桶面放在桌上。
+    why: (s) => (stage(s) === 0 ? '桌上没有面。' : ''),
     onStart: { set: { 'noodle.stage': 2 }, flags: ['tried:soak'] },
   },
   {

@@ -7,6 +7,7 @@
 // 做物件上的事时，角色走到物件跟前；点地板，角色在地板上走过去（左右和前后）。
 // 地板上的东西按远近排前后（data/objects 的 layerOf）。夜里房间变暗是给墙、地板、物件和角色降亮度，窗外不受影响；
 // 开了灯，房间亮回来，罩上一层暖黄的光。
+// 点灰掉的东西（或者做不了的技能），小人头上冒一句为什么不行（core/rules 的 whyNot），不写进事件流。
 // 角色站在哪只是画面，不影响规则。
 
 import type { GameState } from '../core/state';
@@ -15,7 +16,7 @@ import type { ActionDef, MenuEntry } from '../core/rules';
 import type { SkillDef } from '../core/skills';
 import type { ObjectDef } from '../data/objects';
 import { isVisible } from '../core/reveal';
-import { barPreview, blockedReason, objectAvailable, objectMenu, poseOf, running } from '../core/rules';
+import { barPreview, blockedReason, objectAvailable, objectMenu, poseOf, running, whyNot } from '../core/rules';
 import { learned, skillProgress } from '../core/skills';
 import { daylight, stamp, hm } from '../core/time';
 import { MESSAGES } from '../data/messages';
@@ -81,6 +82,10 @@ export class Scene {
   private readonly skillsEl: HTMLElement;
   private readonly skillPanel: HTMLElement;
   private readonly toast: HTMLElement;
+  private readonly bubble: HTMLElement;
+  private readonly head: HTMLElement;
+  private bubbleTimer = 0;
+  private paused = false;
   private readonly cheer: HTMLElement;
   private readonly menu: HTMLElement;
   private readonly closeup: HTMLElement;
@@ -153,6 +158,7 @@ export class Scene {
           ).join('')}</nav>
           <div class="skill-panel" hidden></div>
           <div class="toast" aria-live="polite"></div>
+          <div class="say" aria-live="polite" hidden></div>
           <div class="menu" role="menu" hidden></div>
           <div class="closeup" hidden></div>
           <div class="phone-screen" hidden></div>
@@ -189,6 +195,8 @@ export class Scene {
     this.skillsEl = $('.skills');
     this.skillPanel = $('.skill-panel');
     this.toast = $('.toast');
+    this.bubble = $('.say');
+    this.head = $('.character .head');
     this.cheer = $('.cheer');
     this.menu = $('.menu');
     this.closeup = $('.closeup');
@@ -216,9 +224,10 @@ export class Scene {
     $('.pockets').addEventListener('click', (e) => {
       e.stopPropagation();
       const t = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-item]');
-      if (!t || t.disabled) return;
+      if (!t) return;
       this.hideMenu();
       this.panelSkill = null;
+      if (t.classList.contains('off')) return this.explain(this.onObject(t.dataset.item!));
       intents.openItem(t.dataset.item!);
     });
     // 点房间里空的地方：收起菜单，放下手机。点到房间外面（页面四周、状态条、事件流），近景也合上。
@@ -283,9 +292,10 @@ export class Scene {
     this.skillsEl.addEventListener('click', (e) => {
       e.stopPropagation();
       const t = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-skill]');
-      if (!t || t.disabled || !this.state) return;
+      if (!t || !this.state) return;
       const sk = this.skills.find((x) => x.id === t.dataset.skill)!;
       this.hideMenu();
+      if (t.classList.contains('blocked')) return this.explain([this.actions.get(sk.auto)!]);
       if (!learned(this.state, sk)) return this.showSkillPanel(this.panelSkill === sk.id ? null : sk.id);
       if (running(this.state, sk.auto)) this.intents.stop(sk.auto);
       else this.act(sk.auto);
@@ -311,6 +321,11 @@ export class Scene {
       el.addEventListener('click', (e) => {
         e.stopPropagation();
         this.panelSkill = null;
+        // 灰着的物件：点了也做不了，小人说一句为什么。
+        if (!el.classList.contains('available')) {
+          this.hideMenu();
+          return this.explain(this.onObject(o.id));
+        }
         if (menuObj) return this.openMenu(o.id, (e as PointerEvent).pointerType === 'mouse');
         this.hideMenu();
         intents.clickObject(o.id);
@@ -361,6 +376,42 @@ export class Scene {
     this.character.classList.add('walking');
     clearTimeout(this.walkTimer);
     this.walkTimer = window.setTimeout(() => this.character.classList.remove('walking'), dur * 1000);
+  }
+
+  /** 某个物件上的事（手动的、已经浮现的）。 */
+  private onObject(objectId: string): ActionDef[] {
+    const s = this.state;
+    return s ? this.content.actions.filter((a) => a.object === objectId && !a.auto && this.shown(s, a.id)) : [];
+  }
+
+  /** 做不了：小人头上冒一句为什么。说不出原因就不说。暂停时世界不动，也不说话。 */
+  private explain(candidates: readonly ActionDef[]): void {
+    const s = this.state;
+    if (!s || this.paused) return;
+    const mood = this.content.moodWhy ?? (() => '');
+    const t = whyNot(s, this.content.actions, candidates, mood);
+    if (!t) return;
+    this.bubble.textContent = t;
+    this.bubble.hidden = false;
+    this.bubble.classList.remove('pop');
+    void this.bubble.offsetWidth;
+    this.bubble.classList.add('pop');
+    this.placeBubble();
+    clearTimeout(this.bubbleTimer);
+    this.bubbleTimer = window.setTimeout(() => {
+      this.bubble.hidden = true;
+    }, 2400);
+  }
+
+  /** 话冒在头顶上，跟着人走；贴边时往里收，不出房间。 */
+  private placeBubble(): void {
+    if (this.bubble.hidden) return;
+    const box = this.room.getBoundingClientRect();
+    const h = this.head.getBoundingClientRect();
+    const half = this.bubble.offsetWidth / 2;
+    const x = Math.min(box.width - half - 6, Math.max(half + 6, h.left + h.width / 2 - box.left));
+    this.bubble.style.left = `${x}px`;
+    this.bubble.style.top = `${Math.max(this.bubble.offsetHeight + 16, h.top - box.top)}px`;
   }
 
   private dismiss(): void {
@@ -651,10 +702,10 @@ export class Scene {
     this.skillsEl.dataset.count = String(rows.length);
     this.skillsEl.innerHTML = rows
       .map((r) => {
-        const cls = ['sk', r.done ? 'learned' : 'learning', r.running ? 'running' : '', r.isNew ? 'new' : ''].join(' ');
+        const cls = ['sk', r.done ? 'learned' : 'learning', r.running ? 'running' : '', r.isNew ? 'new' : '', r.blocked ? 'blocked' : ''].join(' ');
         const sub = r.done ? (r.running ? '做着呢' : '自动') : `${r.p.have}/${r.p.need}`;
         const bar = r.done ? '' : `<i class="sk-bar" style="--p:${r.p.have / r.p.need}"></i>`;
-        return `<button type="button" class="${cls}" data-skill="${r.k.id}" ${r.blocked ? 'disabled' : ''}><b>${esc(r.k.name)}</b><small>${sub}</small>${bar}</button>`;
+        return `<button type="button" class="${cls}" data-skill="${r.k.id}" aria-disabled="${r.blocked}"><b>${esc(r.k.name)}</b><small>${sub}</small>${bar}</button>`;
       })
       .join('');
     this.renderSkillPanel(s);
@@ -770,6 +821,7 @@ export class Scene {
 
   render(s: GameState, paused: boolean, fastForward: boolean, ended: string | null, picking = false): void {
     this.state = s;
+    this.paused = paused;
     this.renderWho(s, picking);
     const now = performance.now();
     this.city.draw(s.t, now);
@@ -791,7 +843,7 @@ export class Scene {
     const unread = MESSAGES.filter((m) => s.flags[`msg:${m.id}`] && !s.flags[`replied:${m.id}`]).length;
     for (const [id, b] of this.pockets) {
       b.hidden = !carrying(s, id);
-      b.disabled = !objectAvailable(s, this.content.actions, id, true);
+      b.classList.toggle('off', !objectAvailable(s, this.content.actions, id, true));
       b.classList.toggle('ping', id === 'phone' && unread > 0 && !s.ongoing?.occupies);
       b.classList.toggle('open', id === 'phone' && this.phoneOpen && !s.ongoing?.occupies);
       b.querySelector('b')!.textContent = id === 'phone' && unread ? String(unread) : '';
@@ -836,6 +888,7 @@ export class Scene {
     this.closeup.classList.toggle('beside-phone', phoneShown);
     this.phone.hidden = !phoneShown;
 
+    this.placeBubble();
     this.noticeProgress(s, now);
     this.renderSkills(s, now);
 

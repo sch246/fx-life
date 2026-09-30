@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { perform, stepWorld } from '../src/core/world';
 import { isVisible } from '../src/core/reveal';
-import { barPreview, blockedReason, objectAvailable, objectMenu, poseOf, running, stopTask } from '../src/core/rules';
+import { barPreview, blockedReason, objectAvailable, objectMenu, poseOf, running, stopTask, whyNot } from '../src/core/rules';
 import { learned } from '../src/core/skills';
 import { dispenserWater, hasHot, k, w } from '../src/data/water';
 import { NOODLES, heat, soak, stage } from '../src/data/noodles';
@@ -108,6 +108,27 @@ describe('第一片走查', () => {
     lost.t = at(1, 19, 31);
     stepWorld(lost, CONTENT);
     expect(blockedReason(lost, act('reply-arrived'))).toBe('requires');
+  });
+
+  it('点灰掉的东西，小人说得出为什么：心情差不想出门、饮水机没水、桌上没面、睡着了', () => {
+    const s = newGame(1);
+    const why = (objectId: string) =>
+      whyNot(s, CONTENT.actions, CONTENT.actions.filter((a) => a.object === objectId && !a.auto), CONTENT.moodWhy!);
+    expect(objectAvailable(s, CONTENT.actions, 'door')).toBe(false);
+    expect(why('door')).toBe('心情太差了，不想出门。');
+    expect(objectAvailable(s, CONTENT.actions, 'dispenser')).toBe(false);
+    expect(why('dispenser')).toBe('饮水机里没水。');
+    expect(objectAvailable(s, CONTENT.actions, 'table')).toBe(false);
+    expect(why('table')).toBe('桌上没有面。');
+    // 能做的时候不编原因。
+    expect(why('window')).toBeNull();
+    s.t = at(1, 22);
+    perform(s, CONTENT, act('lie'));
+    perform(s, CONTENT, act('sleep'));
+    run(s, 30);
+    expect(s.ongoing?.occupies).toBe(true);
+    expect(why('window')).toBe('Zzz……');
+    expect(why('phone')).toBe('Zzz……');
   });
 
   it('水壶：5 分钟烧开，开着不关 30 分钟烧干，再干烧 5 分钟烧坏', () => {
