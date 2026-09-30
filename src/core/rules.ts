@@ -126,7 +126,10 @@ export function clampBars(s: GameState): void {
 }
 
 /** 心情等级。需要自律的行动在心情最低时被挡住。 */
-export const moodLv = (s: GameState) => s.levels.mood ?? 0;
+/** 底子的格数取整就是等级（state.levels 带小数，见 core/world 的 LevelDef）。 */
+export const level = (base: number) => Math.floor(base + 1e-9);
+export const lv = (s: GameState, id: string) => level(s.levels[id] ?? 0);
+export const moodLv = (s: GameState) => lv(s, 'mood');
 
 /** 为什么现在不能做这件事；能做时返回 null。 */
 export function blockedReason(s: GameState, a: ActionDef, lowMoodLv = 0): string | null {

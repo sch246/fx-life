@@ -60,7 +60,7 @@ describe('原型人生', () => {
     for (const w of [...earlyWakes, ...lateWakes]) expect(hourOf(w.t)).toBeGreaterThanOrEqual(5);
   });
 
-  it('通宵一夜：第二天熬过头掉等级；之后照常 22 点睡，几天内缓过来，体能没有垮', () => {
+  it('通宵一夜：第二天熬过头掉等级；之后照常 22 点睡，一周内把底子养回来，体能没有垮', () => {
     const s = newGame(1);
     s.t = at(1, 18);
     s.items.noodles = 999;
@@ -68,7 +68,7 @@ describe('原型人生', () => {
     const policy = (x: GameState) =>
       carefulPlayer(x, { sleepFrom: x.t >= at(2, 18) && x.t < at(3, 12) ? 5 : 22, goOut: false });
     const lows: number[] = [];
-    for (let i = 0; i < 6 * DAY; i++) {
+    for (let i = 0; i < 7 * DAY; i++) {
       policy(s);
       stepWorld(s, CONTENT);
       lows.push(s.levels.energy);

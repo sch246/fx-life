@@ -7,6 +7,7 @@ import type { GameState } from '../core/state';
 import { activeBands, BANDS, EFFECTS } from '../data/body';
 import { isVisible } from '../core/reveal';
 import { stamp } from '../core/time';
+import { lv } from '../core/rules';
 
 const r = (n: number) => Math.round(n);
 
@@ -29,7 +30,13 @@ export function debugEnabled(): boolean {
 
 export function debugText(s: GameState, paused: boolean): string {
   const out: string[] = [];
-  out.push(`${stamp(s.t)}  ${paused ? '暂停' : '走'}  心情 lv${s.levels.mood ?? 0}  体能 lv${s.levels.fitness ?? 0}  精力 lv${s.levels.energy ?? 0}`);
+  // 底子带小数：lv2+40% 是攒满两格、第三格攒了四成。
+  const base = (id: string) => {
+    const x = s.levels[id] ?? 0;
+    const f = x - lv(s, id);
+    return `lv${lv(s, id)}${f > 0.005 ? `+${Math.round(f * 100)}%` : ''}`;
+  };
+  out.push(`${stamp(s.t)}  ${paused ? '暂停' : '走'}  心情 ${base('mood')}  体能 ${base('fitness')}  精力 ${base('energy')}`);
   out.push(`进行中 ${s.ongoing?.actionId ?? '—'}   后台 ${s.tasks.map((t) => t.actionId).join(',') || '—'}   面 ${s.items.noodles ?? 0}`);
   out.push('─ 条 ─────────────────────────────────────────');
   for (const id of Object.keys(s.bars)) {

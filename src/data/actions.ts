@@ -11,13 +11,13 @@ import { MESSAGES } from './messages';
 import { learned } from './skills';
 import { fallAsleepMin, lampOn, roomLight, sleepQuality } from './room';
 import { carrying } from './items';
-import { WATER, dispenserWater, drinkBars, fill, hotSource, k, pour, vessel, w } from './water';
+import { DUMP_ACTIONS, WATER, dispenserWater, drinkBars, fill, hotSource, k, pour, vessel, w } from './water';
 import { AUTO_NOODLES, NOODLES, NOODLE_ACTIONS, stage } from './noodles';
 
 const starving = (s: GameState) => (s.bars.stamina ?? 0) < BODY.hungryWake;
-/** 欠着觉（精力不在最高一级）。 */
-const owed = (s: GameState) => (s.levels.energy ?? BODY.rested) < BODY.rested;
-/** 睡足了：精力满，而且不欠觉。 */
+/** 欠着觉：精力的底子没攒满。 */
+const owed = (s: GameState) => (s.levels.energy ?? BODY.rested) < BODY.rested - 1e-9;
+/** 睡足了：精力满，底子也攒满了。 */
 const rested = (s: GameState) => (s.bars.energy ?? 0) >= 100 && !owed(s);
 /** 房间太亮，睡不着。累垮了、欠着觉，就顾不上亮不亮。 */
 const tooBright = (s: GameState) => roomLight(s) > 0.6 && (s.bars.energy ?? 0) > 30 && !owed(s);
@@ -26,7 +26,7 @@ const tooBright = (s: GameState) => roomLight(s) > 0.6 && (s.bars.energy ?? 0) >
  * 这样熬夜欠下的觉会带进第二天，而不是在醒来前自动还清。
  * 同一条规则也让白天睡不着：闭上眼睛，房间太亮，就起来了。
  * 光源自 data/room 的 roomLight，不是写死的起床时刻：以后夜班白天补觉，只要房间够暗就行。
- * 欠着觉时，补满一次条只升回一级、条从一半接着补，所以会一直睡下去补觉，天亮也叫不醒。
+ * 欠着觉时，条补满之后多出来的才攒回底子，所以会一直睡下去补觉，天亮也叫不醒。
  * 房间一直全暗（遮光窗帘）时，靠"躺够九小时"兜底（欠着觉是十二小时），不会睡不醒。
  */
 const wakeUp = (s: GameState) => {
@@ -192,6 +192,8 @@ export const ACTIONS: readonly ActionDef[] = [
     }),
     line: (s) => (w(s, 'dispenser', 'raw') > 0.01 ? '接了一杯水喝。有股生水味。' : '接了一杯水喝。'),
   },
+  // 水壶、饮水机：都能把水倒掉（data/water）。
+  ...DUMP_ACTIONS,
   // 手机带在身上（data/items）：躺着、坐着都能看，回消息只用手，不起身。
   ...MESSAGES.map(
     (m): ActionDef => ({

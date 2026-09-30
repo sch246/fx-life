@@ -5,7 +5,7 @@ import type { GameState } from './state';
 import type { ActionDef, CueDef, Effect, Predicate } from './rules';
 import type { RevealRule } from './reveal';
 import type { SkillDef } from './skills';
-import { applyEffect, clampBars, startAction, stepCues, stepOngoing, stepTasks } from './rules';
+import { applyEffect, clampBars, level, lv, startAction, stepCues, stepOngoing, stepTasks } from './rules';
 import { stepReveal } from './reveal';
 import { stepRecord } from './record';
 import { say } from './feed';
@@ -17,15 +17,18 @@ export interface Drift {
 }
 
 /**
- * 分级：条的当前值快速变化，等级是慢的一层。
- * 条满时升一级、见底时降一级，然后从 upTo / downTo 重新开始，中间留出余地，不会来回跳。
+ * 底子：条是上面那一截，底子是下面攒着的，按格算，格数就是等级。
+ * - 要养：条满了还在补，多出来的攒进底子，攒够一格升一级；条本身不动。
+ * - 能透支：条见底了还在耗，从底子里抽一格顶上来（硬撑），降一级；底子一直留着，只有见底时才动它。
+ * - 底子也空了还在耗，就是透支到下一层：由别的条承担后果（见 data/body）。
+ * state.levels 记底子有几格，带小数：整数部分是等级，小数部分是正在攒的那一格。
  */
 export interface LevelDef {
-  /** 开局等级。 */
+  /** 开局有几格底子。 */
   start: number;
   max: number;
-  upTo: number;
-  downTo: number;
+  /** 一格底子折合条上多少：攒一格要多出来这么多，抽一格条就回到这么多。 */
+  chunk: number;
   /** 到达某一级时写进事件流的话（键是到达的等级）。 */
   upLines?: Record<number, string>;
   downLines?: Record<number, string>;
@@ -86,26 +89,32 @@ export function perform(s: GameState, c: Content, a: ActionDef): void {
     s.cooldowns[a.object] = s.t;
     applyEffect(s, b.effect);
   }
-  // 条满了、见底了照样收回 0–100；升降级在下一分钟看（到 100 或 0 就算）。
-  clampBars(s);
+  // 一下子补过头的（回消息时心情已经满了），多出来的也攒进底子。
+  settleBars(s, c);
 }
 
 function stepLevels(s: GameState, b: BarDef): void {
   const L = b.levels;
   if (!L) return;
-  const lv = s.levels[b.id] ?? 0;
+  const had = s.levels[b.id] ?? 0;
   const v = s.bars[b.id] ?? 0;
-  if (v >= 100 && lv < L.max) {
-    s.levels[b.id] = lv + 1;
-    s.bars[b.id] = L.upTo;
-    const line = L.upLines?.[lv + 1];
-    if (line) say(s, line);
-  } else if (v <= 0 && lv > 0) {
-    s.levels[b.id] = lv - 1;
-    s.bars[b.id] = L.downTo;
-    const line = L.downLines?.[lv - 1];
-    if (line) say(s, line);
+  if (v > 100) {
+    s.levels[b.id] = Math.min(L.max, had + (v - 100) / L.chunk);
+  } else if (v <= 0 && had > 0) {
+    const take = Math.min(1, had);
+    s.levels[b.id] = had - take;
+    s.bars[b.id] = v + take * L.chunk;
   }
+  const from = level(had);
+  const to = lv(s, b.id);
+  const line = to > from ? L.upLines?.[to] : to < from ? L.downLines?.[to] : undefined;
+  if (line) say(s, line);
+}
+
+/** 这一刻所有的变化加总之后：满了的攒进底子、见底的从底子里抽，然后收回 0–100。 */
+function settleBars(s: GameState, c: Content): void {
+  for (const b of c.bars) stepLevels(s, b);
+  clampBars(s);
 }
 
 /** 推进一游戏分钟。浮现不打断快进；将来需要打断的事件由事件规则声明。 */
@@ -122,11 +131,9 @@ export function stepWorld(s: GameState, c: Content): void {
   for (const p of c.processes ?? []) p.step(s);
   stepOngoing(s, c.actions);
   stepTasks(s, c.actions);
-  // 这一分钟里所有的变化加总之后，再看有没有满或见底，然后收回 0–100。
-  for (const b of c.bars) stepLevels(s, b);
-  clampBars(s);
+  settleBars(s, c);
   stepCues(s, c.cues ?? []);
-  clampBars(s);
+  settleBars(s, c);
   stepReveal(s, c.reveals);
   stepRecord(s);
 }

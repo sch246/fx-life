@@ -195,6 +195,31 @@ describe('第一片走查', () => {
     expect(barPreview(t, act('drink'))).toEqual({ water: 1 });
   });
 
+  it('饮水机里的生水不用非得喝完：倒掉，再倒烧开的进去；开着的水壶要先关掉才能倒', () => {
+    const s = newGame(1);
+    perform(s, CONTENT, act('fill-kettle'));
+    s.ongoing = null;
+    perform(s, CONTENT, act('pour-dispenser'));
+    s.ongoing = null;
+    const menu = () => objectMenu(s, CONTENT.actions, 'dispenser', () => true).map((e) => e.action.id);
+    expect(menu()).toEqual(['drink', 'dump-dispenser']);
+    perform(s, CONTENT, act('dump-dispenser'));
+    s.ongoing = null;
+    expect(dispenserWater(s)).toBe(0);
+    expect(w(s, 'dispenser', 'raw')).toBe(0);
+    expect(menu()).toEqual([]);
+
+    perform(s, CONTENT, act('fill-kettle'));
+    s.ongoing = null;
+    perform(s, CONTENT, act('kettle-on'));
+    expect(blockedReason(s, act('dump-kettle'))).toBe('requires');
+    run(s, 5);
+    perform(s, CONTENT, act('kettle-off'));
+    perform(s, CONTENT, act('pour-dispenser'));
+    s.ongoing = null;
+    expect(barPreview(s, act('drink'))).toEqual({ water: 1 });
+  });
+
   describe('泡面', () => {
     /** 从箱子里拿一桶，照步骤泡上，等 wait 分钟揭开。 */
     const cook = (wait: number, packets = ['sauce', 'salt', 'veg']) => {
@@ -278,6 +303,35 @@ describe('第一片走查', () => {
       expect(bland.accum['skill:soak'] ?? 0).toBe(0);
       run(bland, NOODLES.eatMin);
       expect(bland.feed.at(-1)!.text).toBe('一桶面吃完了。料没放全，有点淡。');
+    });
+
+    it('冲上水敞着就能吃，没盖过就是硬的；揭开盖子也是敞着，能吃也能盖回去', () => {
+      const s = newGame(1);
+      s.things['kettle.water'] = 1.5;
+      s.things['kettle.temp'] = 100;
+      for (const id of ['take-noodles', 'noodle-tear', 'noodle-unpack', 'noodle-pour']) tryDo(s, act(id));
+      const table = () => objectMenu(s, CONTENT.actions, 'table', () => true).map((e) => e.action.id);
+      expect(table()).toContain('noodle-eat');
+      expect(table()).toContain('noodle-cover');
+      tryDo(s, act('noodle-cover'));
+      expect(table()).toEqual(['noodle-open']);
+      run(s, 4);
+      perform(s, CONTENT, act('noodle-open'));
+      expect(table()).toContain('noodle-eat');
+      expect(table()).toContain('noodle-cover');
+    });
+
+    it('拿出来还没拆的面能放回箱子；拆开了就放不回去', () => {
+      const s = newGame(1);
+      const before = s.items.noodles;
+      tryDo(s, act('take-noodles'));
+      expect(s.items.noodles).toBe(before - 1);
+      expect(tryDo(s, act('noodle-putback'))).toBe(true);
+      expect(stage(s)).toBe(0);
+      expect(s.items.noodles).toBe(before);
+      tryDo(s, act('take-noodles'));
+      tryDo(s, act('noodle-tear'));
+      expect(blockedReason(s, act('noodle-putback'))).toBe('requires');
     });
 
     it('第一次撕开时技能栏出现泡面；泡好三次才学会，之后能自动泡', () => {

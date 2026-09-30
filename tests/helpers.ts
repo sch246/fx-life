@@ -43,9 +43,9 @@ export function carefulPlayer(s: GameState, opts: CareOptions = {}): void {
   const hungry = s.bars.stamina < 50;
   const thirsty = s.bars.water < 50;
   const st = stage(s);
-  if (st === 6) tryDo(s, act('noodle-eat'));
+  if (st === 4 && heat(s) >= NOODLES.readyMin) tryDo(s, act('noodle-eat'));
   if (st === 5 && heat(s) >= 4) tryDo(s, act('noodle-open'));
-  if (st === 4) tryDo(s, act('noodle-cover'));
+  if (st === 4 && heat(s) < NOODLES.readyMin) tryDo(s, act('noodle-cover'));
   if (st === 3 || st === 4) for (const p of ['sauce', 'salt', 'veg']) tryDo(s, act(`noodle-${p}`));
   const src = hotSource(s, NOODLES.water);
   if (st === 3 && src && w(s, src.id, 'raw') === 0) tryDo(s, act('noodle-pour'));

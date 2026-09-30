@@ -1,6 +1,7 @@
 // 状态条数据表。心情是主线，一开始就显示；其他条何时浮现由 data/reveals 里 id 为 `bar:<id>` 的规则决定。
 // 身体模型的阈值、后果和浮现带都在 data/body.ts，这里只声明每根条的形状和初值。
-// 快慢两层：快变量（体力/水分/精力）随行动即时变化；慢变量（心情/体能）分级，由快变量在一段时间里的状况推动。
+// 快慢两层：快变量（体力/水分/精力）随行动即时变化；慢变量（心情/体能）由快变量在一段时间里的状况推动。
+// 有底子的条（精力/心情/体能）：满了多出来的攒进底子，见底了从底子里抽一格，格数就是等级（core/world 的 LevelDef）。
 // 数值是第一版初值，按试玩调。
 
 import type { BarDef } from '../core/world';
@@ -31,14 +32,13 @@ export const BARS: readonly BarDef[] = [
     initial: 97,
     perHour: -4,
     drift: drift('energy'),
-    // 等级是欠没欠觉，和心情、体能是同一套等级规则：
-    // 见底时掉一级，条回到「累了」线下还能硬撑（熬夜攻关），但一整天都在累的那一带里。
-    // 睡觉把条补满就升回一级，条从 70 接着补：掉了几级，要多睡几觉才养得回来。
+    // 底子是攒着的觉，和心情、体能是同一条底子规则（core/world 的 LevelDef）：
+    // 见底时抽一格顶上，条回到「累了」线下还能硬撑（熬夜攻关），但一整天都在累的那一带里。
+    // 睡觉把条补满之后接着睡，多出来的才攒回底子：抽掉几格，要多睡好几觉才养得回来。
     levels: {
       start: BODY.rested,
       max: BODY.rested,
-      upTo: 70,
-      downTo: 35,
+      chunk: 35,
       upLines: { 1: '缓过来一点了。', 2: '缓过来一点了。', 3: '觉补回来了。' },
       downLines: { 2: '熬过头了，硬撑着。', 1: '困得脑子发木。', 0: '撑不住了。' },
       styles: [
@@ -57,8 +57,7 @@ export const BARS: readonly BarDef[] = [
     levels: {
       start: START_MOOD_LV,
       max: 4,
-      upTo: 40,
-      downTo: 60,
+      chunk: 20,
       upLines: { 1: '好像能起来走走了。' },
       downLines: { 0: '什么都不想做了。' },
       styles: MOOD_STYLES,
@@ -72,8 +71,7 @@ export const BARS: readonly BarDef[] = [
     levels: {
       start: 2,
       max: 4,
-      upTo: 30,
-      downTo: 70,
+      chunk: 50,
       upLines: { 3: '身体好像结实了一点。', 4: '身体好像结实了一点。' },
       downLines: { 1: '身体有点撑不住了。', 0: '身体垮下来了。' },
       styles: [

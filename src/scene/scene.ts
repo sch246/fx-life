@@ -16,7 +16,7 @@ import type { ActionDef, MenuEntry } from '../core/rules';
 import type { SkillDef } from '../core/skills';
 import type { ObjectDef } from '../data/objects';
 import { isVisible } from '../core/reveal';
-import { barPreview, blockedReason, objectAvailable, objectMenu, poseOf, running, whyNot } from '../core/rules';
+import { barPreview, blockedReason, lv, objectAvailable, objectMenu, poseOf, running, whyNot } from '../core/rules';
 import { learned, skillProgress } from '../core/skills';
 import { daylight, stamp, hm } from '../core/time';
 import { MESSAGES } from '../data/messages';
@@ -66,7 +66,7 @@ const CONFETTI = ['#f5d36b', '#e88a5b', '#8fb3a0', '#9cc3ff', '#e5484d', '#f3efe
 function levelStyle(b: BarDef, s: GameState) {
   const st = b.levels?.styles;
   if (!st) return null;
-  return st[Math.min(st.length - 1, s.levels[b.id] ?? 0)];
+  return st[Math.min(st.length - 1, lv(s, b.id))];
 }
 
 export class Scene {
@@ -94,7 +94,7 @@ export class Scene {
   private readonly end: HTMLElement;
   private readonly ff: HTMLElement;
   private readonly objs = new Map<string, HTMLElement>();
-  private readonly bars = new Map<string, { el: HTMLElement; fill: HTMLElement; track: HTMLElement }>();
+  private readonly bars = new Map<string, { el: HTMLElement; fill: HTMLElement; track: HTMLElement; base: HTMLElement }>();
   private readonly feed: HTMLElement;
   private readonly pauseBtn: HTMLButtonElement;
   private readonly who: HTMLElement;
@@ -345,9 +345,15 @@ export class Scene {
     for (const b of content.bars) {
       const el = document.createElement('div');
       el.className = `bar bar-${b.id}`;
-      el.innerHTML = `<span class="bar-name">${b.name}</span><span class="bar-track"><span class="bar-fill"></span></span>`;
+      // 条下面一道细线是正在攒的那一格底子：满了还在补，它就一点点变长，攒够一格条就变粗。
+      el.innerHTML = `<span class="bar-name">${b.name}</span><span class="bar-col"><span class="bar-track"><span class="bar-fill"></span></span><span class="bar-base"><i></i></span></span>`;
       barsEl.appendChild(el);
-      this.bars.set(b.id, { el, fill: el.querySelector('.bar-fill')!, track: el.querySelector('.bar-track')! });
+      this.bars.set(b.id, {
+        el,
+        fill: el.querySelector('.bar-fill')!,
+        track: el.querySelector('.bar-track')!,
+        base: el.querySelector('.bar-base')!,
+      });
     }
   }
 
@@ -604,14 +610,14 @@ export class Scene {
   }
 
   /**
-   * 泡面近景：桌上这一桶是主角。封着、撕开、料包和叉子摆在旁边、冲上热水、盖上盖子用叉子压住、揭开。
+   * 泡面近景：桌上这一桶是主角。封着、撕开、料包和叉子摆在旁边、冲上热水、盖上盖子用叉子压住、揭开（又敞着了）。
    * 右边只列现在能做的步骤；料包也可以直接点。
    */
   private renderNoodle(s: GameState): void {
     const st = stage(s);
     if (st === 0) return this.closeCloseup();
     const acts = this.doable(s, 'table');
-    const q = st === 6 ? quality(s) : -1;
+    const q = st === 4 ? quality(s) : -1;
     const needHot = st === 3 && !hotSource(s, NOODLES.water);
     const key = `noodle|${st}|${PACKETS.map((p) => n(s, p.id)).join('')}|${acts.map((a) => a.id).join()}|${q}|${needHot}`;
     if (key !== this.lastViewKey) {
@@ -623,7 +629,7 @@ export class Scene {
       }).join('');
       const note = needHot
         ? '要冲热水才能泡。'
-        : st === 6
+        : st === 4
           ? ['面还硬着。', '泡好了。', '面泡坨了。'][q]
           : '';
       const flecks = PACKETS.filter((p) => n(s, p.id)).map((p) => p.id).join(' ');
@@ -903,6 +909,14 @@ export class Scene {
       if (style) {
         v.track.style.height = `${style.thickness}px`;
         v.fill.style.background = style.color;
+      }
+      const growing = b.levels ? (s.levels[b.id] ?? 0) - lv(s, b.id) : 0;
+      v.base.classList.toggle('on', growing > 0.005 && lv(s, b.id) < b.levels!.max);
+      if (growing > 0.005) {
+        v.base.style.setProperty('--grow', growing.toFixed(3));
+        // 细线用下一级的颜色：攒满了条就变成这个颜色。
+        const next = b.levels?.styles?.[lv(s, b.id) + 1];
+        if (next) v.base.style.setProperty('--grow-color', next.color);
       }
     }
 

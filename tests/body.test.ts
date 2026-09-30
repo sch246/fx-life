@@ -130,7 +130,7 @@ describe('身体模型：单一事实来源', () => {
     expect(s.ongoing?.occupies).toBe(true);
   });
 
-  it('精力见底掉一级、条回到「累了」线下硬撑；欠着觉时天亮叫不醒，睡到补满升回一级', () => {
+  it('精力见底从底子抽一格、条回到「累了」线下硬撑；欠着觉时天亮叫不醒，补满后接着睡才攒回底子', () => {
     const s = newGame(1);
     s.t = at(2, 3);
     s.bars.energy = 0.01;
@@ -155,16 +155,46 @@ describe('身体模型：单一事实来源', () => {
     expect(sleepAt(BODY.rested - 1).ongoing?.actionId).toBe('sleep');
     expect(sleepAt(BODY.rested).ongoing?.actionId).toBe('lie');
 
-    // 睡到把条补满，升回一级，条从 70 接着补。
+    // 睡到把条补满还接着睡，多出来的攒回底子，攒够一格升回一级；条一直是满的。
     const r = newGame(1);
     r.t = at(2, 22);
     r.levels.energy = BODY.rested - 1;
     r.bars.energy = 60;
+    r.bars.stamina = 90;
+    r.bars.water = 90;
     perform(r, CONTENT, act('lie'));
     perform(r, CONTENT, act('sleep'));
     while (r.ongoing?.actionId === 'sleep' && r.levels.energy < BODY.rested) stepWorld(r, CONTENT);
     expect(r.levels.energy).toBe(BODY.rested);
+    expect(r.bars.energy).toBe(100);
     expect(r.feed.some((l) => l.text === '觉补回来了。')).toBe(true);
+  });
+
+  it('底子：满了多出来的才攒进去，条掉下来时不动它，见底了才抽一格', () => {
+    const s = createState({ bars: { mood: 99 }, levels: { mood: 1 } });
+    const mood = { id: 'mood', name: '心情', initial: 0, levels: { start: 1, max: 4, chunk: 20 } };
+    const c = { ...CONTENT, bars: [mood], cues: [], processes: [], manualBonus: undefined };
+    // 回一条消息 +10：条满了，多出来的 9 攒进底子（9/20 格）。
+    perform(s, c, { id: 'x', object: 'phone', label: 'x', temper: 'impulse', requires: () => true, onStart: { bars: { mood: 10 } } });
+    expect(s.bars.mood).toBe(100);
+    expect(s.levels.mood).toBeCloseTo(1.45);
+    // 条往下掉，底子不动。
+    s.bars.mood = 30;
+    stepWorld(s, c);
+    expect(s.levels.mood).toBeCloseTo(1.45);
+    // 见底了还在掉：抽一格顶上，等级降一级，没攒满的那部分留着。
+    s.bars.mood = -2;
+    stepWorld(s, c);
+    expect(s.levels.mood).toBeCloseTo(0.45);
+    expect(s.bars.mood).toBeCloseTo(18);
+    // 再见底：只剩不到一格，抽光它；底子空了就不再抽。
+    s.bars.mood = -1;
+    stepWorld(s, c);
+    expect(s.levels.mood).toBe(0);
+    expect(s.bars.mood).toBeCloseTo(8);
+    s.bars.mood = -1;
+    stepWorld(s, c);
+    expect(s.bars.mood).toBe(0);
   });
 
   it('躺着补不上精力，只让它掉得慢一点；躺着熬到见底，照样掉一级', () => {

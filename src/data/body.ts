@@ -9,11 +9,12 @@
 // 想让某根条更早出现，不要手改阈值，而是在这里给它加一条能被玩家感知的后果。
 // 数值是第一版初值，按试玩调。
 
-import type { Predicate } from '../core/rules';
+import { lv, type Predicate } from '../core/rules';
 import type { GameState } from '../core/state';
 
 const bar = (s: GameState, id: string) => s.bars[id] ?? 0;
-const lv = (s: GameState, id: string) => s.levels[id] ?? 0;
+/** 底子还剩多少格（带小数）。 */
+const base = (s: GameState, id: string) => s.levels[id] ?? 0;
 
 /** 阈值：一个概念只在这里定义一次。 */
 export const BODY = {
@@ -30,8 +31,8 @@ export const BODY = {
   /** 浮现迟滞：回到这条线以上并稳定一段时间才淡出，避免在边界抖动。 */
   calm: 65,
   /**
-   * 精力的等级是欠没欠觉：睡足是最高级。精力见底时掉一级、条回到「累了」线下硬撑；
-   * 睡觉把条补满升回一级。见 data/bars 的 energy.levels。
+   * 精力的底子是攒着的觉，格数满了就是睡足。精力见底时从底子里抽一格、条回到「累了」线下硬撑；
+   * 睡觉把条补满后接着睡，多出来的攒回底子。见 data/bars 的 energy.levels。
    */
   rested: 3,
 } as const;
@@ -66,8 +67,8 @@ export const EFFECTS: readonly EffectRule[] = [
 
   // 体能（慢变量）：透支时快速往下掉，吃好睡好要好几天才攒回来。
   { id: 'fitness.starving', bar: 'fitness', when: (s) => bar(s, 'stamina') < BODY.burnout, perHour: -20, note: '饿空了还在撑，体能透支' },
-  // 精力见底先掉等级硬撑（data/bars）；等级也掉到底了还在撑，才透支体能。
-  { id: 'fitness.tired', bar: 'fitness', when: (s) => lv(s, 'energy') === 0 && bar(s, 'energy') < BODY.burnout, perHour: -20, note: '欠觉欠到底还在撑，体能透支' },
+  // 精力见底先从底子里抽一格硬撑（core/world 的底子规则）；底子也空了还在撑，才透支体能。
+  { id: 'fitness.tired', bar: 'fitness', when: (s) => base(s, 'energy') <= 0 && bar(s, 'energy') < BODY.burnout, perHour: -20, note: '欠的觉把底子掏空了还在撑，体能透支' },
   { id: 'fitness.thirsty', bar: 'fitness', when: (s) => bar(s, 'water') < BODY.burnout, perHour: -20, note: '缺水还在撑，体能透支' },
   { id: 'fitness.nourished', bar: 'fitness', when: fed, perHour: 1, note: '吃好睡好，体能慢慢攒回来' },
 ];
