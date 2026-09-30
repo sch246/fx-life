@@ -33,8 +33,8 @@ export interface GameState {
   t: number;
   /** 各根条，0–100。哪些条存在由 data/bars 决定。 */
   bars: Record<string, number>;
-  /** 心情等级 0–4：心死、半死、平常、快乐、幸福。 */
-  moodLv: number;
+  /** 各根条的等级（例如心情 0–4：心死、半死、平常、快乐、幸福）。哪些条分级由 data/bars 决定。 */
+  levels: Record<string, number>;
   money: number;
   /** 长期积累：技能、回忆、纪念物计数等。 */
   accum: Record<string, number>;
@@ -54,7 +54,7 @@ export interface NewStateOptions {
   /** 开局时间，默认第 1 天 18:00。 */
   t?: number;
   bars?: Record<string, number>;
-  moodLv?: number;
+  levels?: Record<string, number>;
   money?: number;
   items?: Record<string, number>;
 }
@@ -67,7 +67,7 @@ export function createState(o: NewStateOptions = {}): GameState {
     rng: {},
     t,
     bars: { ...(o.bars ?? {}) },
-    moodLv: o.moodLv ?? 0,
+    levels: { ...(o.levels ?? {}) },
     money: o.money ?? 0,
     accum: {},
     items: { ...(o.items ?? {}) },

@@ -9,7 +9,7 @@ describe('状态', () => {
   it('默认第 1 天 18:00 开局，心情 lv0', () => {
     const s = createState();
     expect(s.t).toBe(at(1, 18));
-    expect(s.moodLv).toBe(0);
+    expect(s.levels.mood ?? 0).toBe(0);
   });
 
   it('序列化往返不丢信息', () => {

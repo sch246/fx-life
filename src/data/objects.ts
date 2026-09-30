@@ -11,4 +11,10 @@ export interface ObjectDef {
   h: number;
 }
 
-export const OBJECTS: readonly ObjectDef[] = [];
+export const OBJECTS: readonly ObjectDef[] = [
+  { id: 'window', name: '窗户', x: 58, y: 12, w: 26, h: 38 },
+  { id: 'bed', name: '床', x: 4, y: 58, w: 30, h: 22 },
+  { id: 'bag', name: '行李', x: 40, y: 68, w: 10, h: 12 },
+  { id: 'phone', name: '手机', x: 26, y: 55, w: 4, h: 5 },
+  { id: 'door', name: '门', x: 88, y: 26, w: 10, h: 46 },
+];
