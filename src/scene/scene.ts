@@ -2,7 +2,9 @@
 // 只读状态、只通过回调发出意图；不直接改状态，规则留在 core/。
 // 条的淡入淡出靠切换 .shown 类；物件常驻，靠切换 .available 类在灰与上色之间过渡。
 // 点物件只是打开它：弹出能做的事（menu），凑近看（closeup），或者在右侧打开屏幕（screen）。
-// 菜单和近景里只列现在能做的事。做物件上的事时，角色走到物件跟前；点地板，角色走过去。
+// 菜单和近景里只列现在能做的事；鼠标移到物件上就弹出菜单，少点一下。
+// 做物件上的事时，角色走到物件跟前；点地板，角色在地板上走过去（左右和前后）。
+// 地板上的东西按远近排前后（data/objects 的 layerOf）。夜里房间变暗是给墙、地板、物件和角色降亮度，窗外不受影响。
 // 角色站在哪只是画面，不影响规则。
 
 import type { GameState } from '../core/state';
@@ -11,14 +13,13 @@ import type { ActionDef, MenuEntry } from '../core/rules';
 import type { SkillDef } from '../core/skills';
 import type { ObjectDef } from '../data/objects';
 import { isVisible } from '../core/reveal';
-import { barPreview, blockedReason, objectAvailable, poseOf } from '../core/rules';
+import { barPreview, blockedReason, objectAvailable, objectMenu, poseOf } from '../core/rules';
 import { learned, skillProgress } from '../core/skills';
 import { daylight, stamp, hm } from '../core/time';
-import { ITEM_NAMES } from '../data/items';
 import { MESSAGES } from '../data/messages';
 import { dispenserWater, hotSource, k, vessel } from '../data/water';
 import { NOODLES, PACKETS, n, quality, soakedFor, stage } from '../data/noodles';
-import { standAt } from '../data/objects';
+import { layerAt, layerOf, standAt, type Spot } from '../data/objects';
 import { CityView } from './window';
 
 export interface SceneIntents {
@@ -29,7 +30,7 @@ export interface SceneIntents {
   doAction(actionId: string): boolean;
   /** 停下正在做的事。 */
   stop(): void;
-  /** 点了地板：能走过去返回 true（睡着时不能）。 */
+  /** 点了地板：能走过去返回 true（睡着时、暂停时不能）。 */
   walk(): boolean;
   restart(): void;
 }
@@ -47,10 +48,9 @@ export class Scene {
   private readonly room: HTMLElement;
   private readonly winTime: HTMLElement;
   private readonly city: CityView;
-  private readonly dim: HTMLElement;
   private readonly sunPatch: HTMLElement;
   private readonly character: HTMLElement;
-  private readonly tableCup: HTMLElement;
+  private readonly tableCup: HTMLButtonElement;
   private readonly kettleFx: HTMLElement;
   private readonly dispWater: HTMLElement;
   private readonly skillsEl: HTMLElement;
@@ -58,7 +58,6 @@ export class Scene {
   private readonly toast: HTMLElement;
   private readonly cheer: HTMLElement;
   private readonly menu: HTMLElement;
-  private readonly status: HTMLElement;
   private readonly closeup: HTMLElement;
   private readonly phone: HTMLElement;
   private readonly end: HTMLElement;
@@ -70,19 +69,25 @@ export class Scene {
   private readonly actions: Map<string, ActionDef>;
   private readonly skills: readonly SkillDef[];
   private feedCount = 0;
-  private statusOpen = false;
   private view: { kind: 'closeup' | 'screen'; id: string } | null = null;
   private phoneApp: 'home' | 'chat' = 'home';
   private lastViewKey = '';
   private lastSkillsKey = '';
   private panelSkill: string | null = null;
+  private panelKey = '';
+  /** 菜单开在哪个物件上；每帧按状态重算里面的项，变了才重建。 */
+  private menuFor: string | null = null;
+  private menuKey = '';
+  private menuTimer = 0;
+  /** 菜单是鼠标悬浮打开的（移开就收起）；触屏点开的菜单要点别处才收起。 */
+  private menuByHover = false;
   /** 各技能上次看到的进度：进度涨了就提示，学会了就庆祝。开局第一帧只记下，不提示。 */
   private progress: Map<string, number> | null = null;
   private fresh = new Map<string, number>();
   private toastTimer = 0;
   private cheerTimer = 0;
-  /** 角色站的位置（房间宽度的百分比）。 */
-  private charX = 51.5;
+  /** 角色站的位置：左边缘的横坐标、脚的纵坐标（房间的百分比）。 */
+  private spot: Spot = { x: 51.5, y: 76 };
   private state: GameState | null = null;
 
   constructor(
@@ -104,16 +109,14 @@ export class Scene {
           <div class="floor"></div>
           <div class="sun-patch"></div>
           <div class="window"><canvas class="city"></canvas><span class="win-time"></span></div>
-          <div class="table-cup" hidden><i class="film"></i><i class="steam"></i></div>
+          <button type="button" class="table-cup" hidden aria-label="泡面"><i class="film"></i><i class="steam"></i><span class="tip">泡面</span></button>
           <div class="kettle-fx"><i class="glow"></i><i class="steam"></i></div>
           <div class="disp-water"></div>
-          <button class="character" type="button" aria-label="角色"><i class="head"></i><i class="body"></i></button>
-          <div class="dim"></div>
+          <div class="character" aria-hidden="true"><i class="head"></i><i class="body"></i></div>
           <nav class="skills" aria-label="技能"></nav>
           <div class="skill-panel" hidden></div>
           <div class="toast" aria-live="polite"></div>
           <div class="menu" role="menu" hidden></div>
-          <div class="status" hidden></div>
           <div class="closeup" hidden></div>
           <div class="phone-screen" hidden></div>
           <div class="cheer" hidden><div class="confetti"></div><div class="cheer-card"><b></b><span>【自动】已解锁，点左上角的按钮就能让他自己做</span></div></div>
@@ -130,7 +133,6 @@ export class Scene {
     this.room = $('.room');
     this.winTime = $('.win-time');
     this.city = new CityView($('.city'));
-    this.dim = $('.dim');
     this.sunPatch = $('.sun-patch');
     this.character = $('.character');
     this.tableCup = $('.table-cup');
@@ -141,7 +143,6 @@ export class Scene {
     this.toast = $('.toast');
     this.cheer = $('.cheer');
     this.menu = $('.menu');
-    this.status = $('.status');
     this.closeup = $('.closeup');
     this.phone = $('.phone-screen');
     this.end = $('.end');
@@ -149,13 +150,14 @@ export class Scene {
     this.feed = $('.feed');
     this.pauseBtn = $('.pause');
     this.pauseBtn.addEventListener('click', () => intents.togglePause());
-    this.character.addEventListener('click', (e) => {
+    // 桌上的面：点它就是凑近小桌上的这一桶。
+    this.tableCup.addEventListener('click', (e) => {
       e.stopPropagation();
-      this.hideMenu();
-      this.statusOpen = !this.statusOpen;
+      this.dismiss();
+      intents.clickObject('table');
     });
     $('.restart').addEventListener('click', () => intents.restart());
-    // 点房间里空的地方：收起菜单、状态和手机。点到房间外面（页面四周、状态条、事件流），近景也合上。
+    // 点房间里空的地方：收起菜单和手机。点到房间外面（页面四周、状态条、事件流），近景也合上。
     this.room.addEventListener('click', () => this.dismiss());
     document.addEventListener('click', (e) => {
       const t = e.target as HTMLElement;
@@ -164,15 +166,26 @@ export class Scene {
         this.closeView();
       }
     });
-    // 点地板：角色走过去。
+    // 点地板：角色走过去，左右、前后都能走。
     $('.floor').addEventListener('click', (e) => {
       e.stopPropagation();
       this.dismiss();
       if (!intents.walk()) return;
       const box = this.room.getBoundingClientRect();
-      this.charX = Math.min(92, Math.max(2, ((e.clientX - box.left) / box.width) * 100 - 2.5));
+      const x = ((e.clientX - box.left) / box.width) * 100 - 2.5;
+      const y = ((e.clientY - box.top) / box.height) * 100;
+      this.moveTo({ x: Math.min(93, Math.max(1, x)), y: Math.min(97, Math.max(73.5, y)) });
     });
-    for (const el of [this.menu, this.status, this.closeup, this.phone, this.skillPanel]) el.addEventListener('click', (e) => e.stopPropagation());
+    for (const el of [this.menu, this.closeup, this.phone, this.skillPanel]) el.addEventListener('click', (e) => e.stopPropagation());
+    // 菜单和技能说明：鼠标移出物件、菜单或技能栏一会儿后收起。
+    this.menu.addEventListener('pointerenter', () => this.keepMenu());
+    this.menu.addEventListener('pointerleave', () => this.hideMenuSoon());
+    document.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'mouse') return;
+      const t = e.target as HTMLElement;
+      if (this.panelSkill && !t.closest('.skills')) this.showSkillPanel(null);
+      if (this.menuFor && this.menuByHover && !t.closest('.menu') && !t.closest(`.obj-${this.menuFor}`)) this.hideMenuSoon();
+    });
 
     // 近景和屏幕里的点击都走事件委托：data-act 做事，data-open 换成另一个近景，data-nav 切换界面，data-close 关掉。
     // 点近景四周空着的地方（背景）也会关掉。
@@ -194,19 +207,22 @@ export class Scene {
       });
     }
 
-    // 技能栏：学会了就一点即做（再点停下）；还在学时点开看要怎样才算会。
+    // 技能栏：鼠标移上去就在旁边显示怎样才算会、学到哪了；学会了就一点即做（再点停下）。
+    // 触屏上没有悬浮，还在学时点一下也能看。
+    this.skillsEl.addEventListener('pointerover', (e) => {
+      const t = (e.target as HTMLElement).closest<HTMLElement>('[data-skill]');
+      if (t && e.pointerType === 'mouse') this.showSkillPanel(t.dataset.skill!);
+    });
+    this.skillsEl.addEventListener('pointerleave', (e) => {
+      if (e.pointerType === 'mouse') this.showSkillPanel(null);
+    });
     this.skillsEl.addEventListener('click', (e) => {
       e.stopPropagation();
       const t = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-skill]');
       if (!t || t.disabled || !this.state) return;
       const sk = this.skills.find((x) => x.id === t.dataset.skill)!;
       this.hideMenu();
-      if (!learned(this.state, sk)) {
-        this.panelSkill = this.panelSkill === sk.id ? null : sk.id;
-        this.lastSkillsKey = '';
-        return;
-      }
-      this.panelSkill = null;
+      if (!learned(this.state, sk)) return this.showSkillPanel(this.panelSkill === sk.id ? null : sk.id);
       if (this.state.ongoing?.actionId === sk.auto) this.intents.stop();
       else this.act(sk.auto);
       this.lastSkillsKey = '';
@@ -219,17 +235,30 @@ export class Scene {
       el.dataset.id = o.id;
       el.setAttribute('aria-label', o.name);
       el.innerHTML = `<span class="obj-name">${o.name}</span>`;
-      Object.assign(el.style, { left: `${o.x}%`, top: `${o.y}%`, width: `${o.w}%`, height: `${o.h}%` });
+      Object.assign(el.style, { left: `${o.x}%`, top: `${o.y}%`, width: `${o.w}%`, height: `${o.h}%`, zIndex: String(layerOf(o.id)) });
+      const menuObj = (o.view ?? 'menu') === 'menu';
+      // 有菜单的物件：鼠标移上去就弹出菜单；点一下也行（触屏）。能打开来看的物件：点一下打开。
+      el.addEventListener('pointerenter', (e) => {
+        if (menuObj && e.pointerType === 'mouse') this.openMenu(o.id, true);
+      });
+      el.addEventListener('pointerleave', (e) => {
+        if (menuObj && e.pointerType === 'mouse') this.hideMenuSoon();
+      });
       el.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.statusOpen = false;
         this.panelSkill = null;
+        if (menuObj) return this.openMenu(o.id, (e as PointerEvent).pointerType === 'mouse');
         this.hideMenu();
         intents.clickObject(o.id);
       });
       this.room.insertBefore(el, this.character);
       this.objs.set(o.id, el);
     }
+
+    // 桌上、壶上、饮水机上的东西画在它们所在物件的上一层。
+    this.tableCup.style.zIndex = String(layerOf('table') + 2);
+    this.kettleFx.style.zIndex = String(layerOf('kettle') + 1);
+    this.dispWater.style.zIndex = String(layerOf('dispenser') + 1);
 
     const barsEl = $('.bars');
     for (const b of content.bars) {
@@ -249,22 +278,62 @@ export class Scene {
     return true;
   }
 
-  /** 选了菜单里的一项之后调用：角色走过去。 */
-  walkTo(a: ActionDef): void {
-    const x = a.hands ? undefined : standAt(a.object);
-    if (x !== undefined) this.charX = x;
+  /** 开始了一件物件上的事：角色走过去。 */
+  private walkTo(a: ActionDef): void {
+    const p = a.hands ? undefined : standAt(a.object);
+    if (p) this.moveTo(p);
+  }
+
+  /** 走到某处：走得越远用时越久（只是画面，不花游戏时间）。 */
+  private moveTo(p: Spot): void {
+    if (p.x === this.spot.x && p.y === this.spot.y) return;
+    const d = Math.hypot(p.x - this.spot.x, (p.y - this.spot.y) * 1.6);
+    this.character.style.setProperty('--walk', `${Math.min(1.4, Math.max(0.25, d * 0.028)).toFixed(2)}s`);
+    this.spot = { ...p };
   }
 
   private dismiss(): void {
     this.hideMenu();
-    this.statusOpen = false;
     this.panelSkill = null;
     if (this.view?.kind === 'screen') this.closeView();
   }
 
-  showMenu(objectId: string, entries: readonly MenuEntry[], s: GameState): void {
+  private openMenu(objectId: string, byHover: boolean): void {
+    this.keepMenu();
+    if (this.menuFor !== objectId) this.menuKey = '';
+    this.menuFor = objectId;
+    this.menuByHover = byHover;
+    if (this.state) this.renderMenu(this.state);
+  }
+
+  private keepMenu(): void {
+    clearTimeout(this.menuTimer);
+    this.menuTimer = 0;
+  }
+
+  private hideMenuSoon(): void {
+    if (this.menuTimer) return;
+    this.menuTimer = window.setTimeout(() => this.hideMenu(), 280);
+  }
+
+  /** 菜单里的项跟着状态变：做不了的事消失，新能做的出现；什么都做不了时收起。 */
+  private renderMenu(s: GameState): void {
+    const id = this.menuFor;
+    if (!id) return;
+    const entries = objectMenu(s, this.content.actions, id, (aid) => this.shown(s, aid));
+    const key = entries.map((e) => `${e.kind}:${e.action.id}`).join();
+    if (entries.length === 0) {
+      this.menu.hidden = true;
+      this.menuKey = '';
+      return;
+    }
+    if (key !== this.menuKey || this.menu.hidden) this.showMenu(id, entries, s);
+    this.menuKey = key;
+  }
+
+  private showMenu(objectId: string, entries: readonly MenuEntry[], s: GameState): void {
     const anchor = this.objs.get(objectId);
-    if (!anchor || entries.length === 0) return;
+    if (!anchor) return;
     const names = new Map(this.content.bars.map((b) => [b.id, b.name]));
     this.menu.innerHTML = '';
     for (const entry of entries) {
@@ -299,6 +368,9 @@ export class Scene {
   }
 
   hideMenu(): void {
+    this.keepMenu();
+    this.menuFor = null;
+    this.menuKey = '';
     this.menu.hidden = true;
   }
 
@@ -480,9 +552,10 @@ export class Scene {
       const isNew = (this.fresh.get(k.id) ?? 0) > now;
       return { k, p, done, running, blocked, isNew };
     });
-    const key = rows.map((r) => `${r.k.id}:${r.p.have}/${r.p.need}:${r.done}:${r.running}:${r.blocked}:${r.isNew}`).join('|') + `|${this.panelSkill}`;
-    if (key === this.lastSkillsKey) return;
+    const key = rows.map((r) => `${r.k.id}:${r.p.have}/${r.p.need}:${r.done}:${r.running}:${r.blocked}:${r.isNew}`).join('|');
+    if (key === this.lastSkillsKey) return this.renderSkillPanel(s);
     this.lastSkillsKey = key;
+    this.skillsEl.dataset.count = String(rows.length);
     this.skillsEl.innerHTML = rows
       .map((r) => {
         const cls = ['sk', r.done ? 'learned' : 'learning', r.running ? 'running' : '', r.isNew ? 'new' : ''].join(' ');
@@ -491,17 +564,40 @@ export class Scene {
         return `<button type="button" class="${cls}" data-skill="${r.k.id}" ${r.blocked ? 'disabled' : ''}><b>${esc(r.k.name)}</b><small>${sub}</small>${bar}</button>`;
       })
       .join('');
-    const sk = this.panelSkill && this.skills.find((x) => x.id === this.panelSkill);
-    this.skillPanel.hidden = !sk;
-    if (sk) {
+    this.renderSkillPanel(s);
+  }
+
+  private showSkillPanel(id: string | null): void {
+    if (this.panelSkill === id) return;
+    this.panelSkill = id;
+    this.panelKey = '';
+    if (this.state) this.renderSkillPanel(this.state);
+  }
+
+  /** 技能按钮旁边的说明：还在学时是每个条件和进度，学会了说一句怎么用。 */
+  private renderSkillPanel(s: GameState): void {
+    const sk = this.panelSkill ? this.skills.find((x) => x.id === this.panelSkill) : undefined;
+    const btn = sk && this.skillsEl.querySelector<HTMLElement>(`[data-skill="${sk.id}"]`);
+    this.skillPanel.hidden = !btn;
+    if (!sk || !btn) return;
+    const p0 = skillProgress(s, sk);
+    const key = `${sk.id}|${p0.have}|${learned(s, sk)}|${btn.offsetTop}`;
+    if (key === this.panelKey) return;
+    this.panelKey = key;
+    if (learned(s, sk)) {
+      this.skillPanel.innerHTML = `<div class="sp-head"><b>${esc(sk.name)}</b><em>会了</em></div><p class="sp-foot">点一下，他就自己做完；做着的时候再点一下停下。</p>`;
+    } else {
+      const p = skillProgress(s, sk);
       const conds = sk.conditions
         .map((c) => {
           const have = Math.min(c.need, c.have(s));
-          return `<li class="${have >= c.need ? 'ok' : ''}"><span>${esc(c.label)}</span><em>${have}/${c.need}</em></li>`;
+          return `<li class="${have >= c.need ? 'ok' : ''}"><p>${esc(c.label)}</p><div class="sp-row"><i class="sp-bar" style="--p:${have / c.need}"></i><em>${have}/${c.need}</em></div></li>`;
         })
         .join('');
-      this.skillPanel.innerHTML = `<b>学会「${esc(sk.name)}」</b><ul>${conds}</ul><p>学会之后，点这个按钮他就自己做。</p>`;
+      this.skillPanel.innerHTML = `<div class="sp-head"><b>学会「${esc(sk.name)}」</b><em>${p.have}/${p.need}</em></div><ul>${conds}</ul><p class="sp-foot">学会之后，点这个按钮他就自己做。</p>`;
     }
+    this.skillPanel.style.left = `${this.skillsEl.offsetLeft + btn.offsetLeft + btn.offsetWidth + 8}px`;
+    this.skillPanel.style.top = `${this.skillsEl.offsetTop + btn.offsetTop}px`;
   }
 
   /** 进度涨了：小提示；学会了：庆祝。 */
@@ -560,7 +656,7 @@ export class Scene {
     this.city.draw(s.t, now);
     this.winTime.textContent = hm(s.t);
     const day = daylight(s.t);
-    this.dim.style.opacity = String(0.42 * (1 - day));
+    this.room.style.setProperty('--lit', (1 - 0.42 * (1 - day)).toFixed(3));
     this.sunPatch.style.opacity = String(0.22 * day);
 
     // 物件始终在场：能用时上色，不能用时灰。
@@ -576,6 +672,7 @@ export class Scene {
     const pose = poseOf(s, this.content.actions);
     const st = stage(s);
     this.tableCup.hidden = !(st > 0 || pose === 'eat');
+    this.tableCup.disabled = st === 0;
     this.tableCup.dataset.stage = String(st);
     this.tableCup.classList.toggle('hot', st >= 4 && soakedFor(s) < 20);
     const temp = k(s, 'temp');
@@ -584,10 +681,16 @@ export class Scene {
     this.dispWater.style.setProperty('--level', String(dispenserWater(s) / vessel('dispenser').capacity));
 
     // 角色：正在做的事在哪个物件上，就站在那里；否则站在上次走到的地方。
-    const x = cur && !cur.hands ? standAt(cur.object) : undefined;
-    if (x !== undefined) this.charX = x;
-    this.character.style.setProperty('--x', `${this.charX}%`);
+    // 远近：脚越靠下越在前面，也画得稍大一点；躺在床上时在床和手机之间。
+    const at = cur && !cur.hands ? standAt(cur.object) : undefined;
+    if (at) this.moveTo(at);
+    const onBed = pose === 'lie' || pose === 'sleep';
+    this.character.style.setProperty('--x', `${this.spot.x}%`);
+    this.character.style.setProperty('--y', `${this.spot.y}%`);
+    this.character.style.setProperty('--s', (1 + (this.spot.y - 76) * 0.012).toFixed(3));
+    this.character.style.zIndex = String(onBed ? layerOf('bed') + 1 : layerAt(this.spot.y));
     this.character.dataset.pose = pose || (this.view?.kind === 'screen' ? 'phone' : '');
+    this.renderMenu(s);
 
     // 身体被占住（睡着）时，打开着的近景和屏幕都合上。
     if (this.view && s.ongoing?.occupies) this.view = null;
@@ -608,19 +711,6 @@ export class Scene {
         v.track.style.height = `${style.thickness}px`;
         v.fill.style.background = style.color;
       }
-    }
-
-    this.status.hidden = !this.statusOpen;
-    if (this.statusOpen) {
-      const rows = this.content.bars.map((b) => {
-        const style = levelStyle(b, s);
-        const css = style ? `height:${style.thickness}px;background:${style.color}` : '';
-        return `<div class="srow"><span>${b.name}</span><span class="bar-track" style="${style ? `height:${style.thickness}px` : ''}"><span class="bar-fill" style="width:${s.bars[b.id] ?? 0}%;${css}"></span></span></div>`;
-      });
-      const items = Object.entries(s.items)
-        .filter(([, c]) => c > 0)
-        .map(([id, c]) => `${ITEM_NAMES[id] ?? id} ×${c}`);
-      this.status.innerHTML = `<div class="stime">${stamp(s.t)}</div>${rows.join('')}${items.length ? `<div class="sitems">${items.join('　')}</div>` : ''}`;
     }
 
     this.pauseBtn.textContent = paused ? '继续' : '暂停';

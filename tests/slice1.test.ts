@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { GameState } from '../src/core/state';
 import { perform, stepWorld } from '../src/core/world';
 import { isVisible } from '../src/core/reveal';
-import { barPreview, blockedReason, keepsCurrent, objectAvailable, objectMenu, poseOf, startAction, type ActionDef } from '../src/core/rules';
+import { barPreview, blockedReason, keepsCurrent, objectAvailable, objectMenu, poseOf, type ActionDef } from '../src/core/rules';
 import { learned } from '../src/core/skills';
 import { dispenserWater, hasHot, hotSource, k, w } from '../src/data/water';
 import { NOODLES, soakedFor, stage } from '../src/data/noodles';
@@ -14,6 +14,7 @@ import { at, hourOf } from '../src/core/time';
 
 const act = (id: string) => CONTENT.actions.find((a) => a.id === id)!;
 const skill = (id: string) => SKILLS.find((x) => x.id === id)!;
+const lyingDown = (s: GameState) => s.ongoing?.actionId === 'lie';
 const run = (s: GameState, min: number) => {
   for (let i = 0; i < min; i++) stepWorld(s, CONTENT);
 };
@@ -28,7 +29,7 @@ function tryDo(s: GameState, a: ActionDef): boolean {
 function carefulPlayer(s: GameState): void {
   if (objectAvailable(s, CONTENT.actions, 'door')) return void tryDo(s, act('go-out'));
   for (const a of CONTENT.actions) if (a.object === 'phone') tryDo(s, a);
-  if (s.ongoing) return;
+  if (s.ongoing && s.ongoing.actionId !== 'lie') return;
   const h = hourOf(s.t);
   const hungry = s.bars.stamina < 50;
   const thirsty = s.bars.water < 50;
@@ -54,7 +55,10 @@ function carefulPlayer(s: GameState): void {
   if (k(s, 'on') && k(s, 'temp') >= 100) tryDo(s, act('kettle-off'));
   if (!wantCup && dispenserWater(s) < 0.25 && k(s, 'water') > 0 && !k(s, 'on') && k(s, 'raw') === 0) tryDo(s, act('pour-dispenser'));
   if (thirsty && w(s, 'dispenser', 'raw') === 0) tryDo(s, act('drink'));
-  if (isVisible(s, 'bar:energy') && (h >= 22 || h < 5) && stage(s) === 0 && !k(s, 'on')) tryDo(s, act('sleep'));
+  if (isVisible(s, 'bar:energy') && (h >= 22 || h < 5) && stage(s) === 0 && !k(s, 'on')) {
+    tryDo(s, act('lie'));
+    if (lyingDown(s)) perform(s, CONTENT, act('sleep'));
+  }
   if (s.t % 90 === 0) tryDo(s, act('look'));
 }
 
@@ -106,11 +110,22 @@ describe('第一片走查', () => {
     expect(ids('kettle')).not.toContain('auto-boil');
   });
 
+  it('不在床上时床上只有躺下；躺下后才能睡', () => {
+    const s = newGame(1);
+    const bed = () => objectMenu(s, CONTENT.actions, 'bed', () => true).map((e) => `${e.kind}:${e.action.id}`);
+    expect(bed()).toEqual(['start:lie']);
+    tryDo(s, act('lie'));
+    expect(bed()).toEqual(['stop:lie', 'start:sleep']);
+  });
+
   it('躺下一会儿才睡着：睡着之前能看手机回消息，不用起身；睡着后只有床能用', () => {
     const s = newGame(1);
     s.t = at(1, 19, 29);
     run(s, 2);
-    startAction(s, act('sleep'));
+    expect(blockedReason(s, act('sleep'))).toBe('requires');
+    tryDo(s, act('lie'));
+    expect(blockedReason(s, act('sleep'))).toBeNull();
+    perform(s, CONTENT, act('sleep'));
     expect(poseOf(s, CONTENT.actions)).toBe('lie');
     expect(objectAvailable(s, CONTENT.actions, 'phone', true)).toBe(true);
     expect(tryDo(s, act('reply-arrived'))).toBe(true);

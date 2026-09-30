@@ -17,9 +17,13 @@ const starving = (s: GameState) => (s.bars.stamina ?? 0) < 15;
 /** 自然醒：睡足且房间亮了，或者饿醒。 */
 const wakeUp = (s: GameState) => (rested(s) && roomLight(s) > 0.2) || starving(s);
 
+/** 躺在床上（还没睡）：睡觉要先躺下。 */
+const lying = (s: GameState) => s.ongoing?.actionId === 'lie';
+
 const SLEEP: Omit<ActionDef, 'id' | 'label'> = {
   object: 'bed',
   temper: 'impulse',
+  requires: lying,
   perHour: { bars: { energy: 12 } },
   rate: sleepQuality,
   stopWhen: wakeUp,
@@ -41,17 +45,18 @@ export const ACTIONS: readonly ActionDef[] = [
     pose: 'look',
   },
   {
+    // 不在床上时，床上只有「躺下」；躺上去之后才能睡。
     id: 'lie',
     object: 'bed',
-    label: '躺着',
+    label: '躺下',
     temper: 'impulse',
     perHour: { bars: { energy: 1.5, mood: 1 } },
     stopLabel: '起来',
     pose: 'lie',
   },
-  { ...SLEEP, id: 'sleep', label: '睡觉', line: '躺下，闭上眼睛。' },
+  { ...SLEEP, id: 'sleep', label: '睡觉', line: '闭上眼睛。' },
   // 睡眠跳过：和睡觉是同一件事，只是开始后快进到醒来。出现条件见 data/reveals。
-  { ...SLEEP, id: 'sleep-skip', label: '睡到醒', skip: true, requires: (s) => moodLv(s) >= 1, line: '躺下，一觉睡到醒。' },
+  { ...SLEEP, id: 'sleep-skip', label: '睡到醒', skip: true, requires: (s) => lying(s) && moodLv(s) >= 1, line: '闭上眼睛，一觉睡到醒。' },
   {
     // 行李箱近景里的衣服：心情到 lv1 后才浮现，需要自律。
     id: 'unpack',

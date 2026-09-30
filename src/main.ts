@@ -1,7 +1,6 @@
 import { Clock } from './core/clock';
 import { perform, stepWorld } from './core/world';
-import { isVisible } from './core/reveal';
-import { blockedReason, objectAvailable, objectMenu, stopOngoing, type ActionDef, type MenuEntry } from './core/rules';
+import { blockedReason, objectAvailable, stopOngoing, type ActionDef, type MenuEntry } from './core/rules';
 import { CONTENT, DEMO_END_FLAG, newGame } from './data';
 import { OBJECTS } from './data/objects';
 import { Scene } from './scene/scene';
@@ -13,10 +12,6 @@ const state = newGame();
 const clock = new Clock(() => stepWorld(state, CONTENT));
 const startedAt = performance.now();
 let endedText: string | null = null;
-
-// 有显隐规则的动作要浮现后才列出；没有规则的一直列出。
-const gated = new Set(CONTENT.reveals.map((r) => r.id));
-const actionVisible = (id: string) => !gated.has(`act:${id}`) || isVisible(state, `act:${id}`);
 
 // 暂停时可以查看，不能行动。
 function begin(a: ActionDef): boolean {
@@ -43,16 +38,12 @@ const scene = new Scene(document.getElementById('app')!, CONTENT, OBJECTS, {
     if (!endedText) clock.setPaused(!clock.paused);
   },
   clickObject: (id) => {
-    // 点物件只是打开它，不直接替玩家做事。
+    // 点能打开来看的物件（行李箱、水壶、桌上的面、手机）：打开它。暂停时不打开，只能看。
+    // 有菜单的物件由场景直接弹出菜单，选了才做事。
     if (clock.paused) return;
     const obj = OBJECTS.find((o) => o.id === id)!;
     const view = obj.view ?? 'menu';
-    if (view !== 'menu') {
-      if (objectAvailable(state, CONTENT.actions, id, !!obj.peek)) scene.openView(view, id);
-      return;
-    }
-    scene.closeView();
-    scene.showMenu(id, objectMenu(state, CONTENT.actions, id, actionVisible), state);
+    if (view !== 'menu' && objectAvailable(state, CONTENT.actions, id, !!obj.peek)) scene.openView(view, id);
   },
   chooseEntry: choose,
   doAction: (id) => {
