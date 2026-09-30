@@ -1,11 +1,12 @@
 // 场景：房间、窗户、角色、物件、状态条、事件流和暂停的绘制与点击。
 // 只读状态、只通过回调发出意图；不直接改状态，规则留在 core/。
-// 淡入淡出靠给元素切换 .shown 类，由 CSS 过渡完成。
+// 条的淡入淡出靠切换 .shown 类；物件常驻，靠切换 .available 类在灰与上色之间过渡。
 
 import type { GameState } from '../core/state';
 import type { Content } from '../core/world';
 import type { ObjectDef } from '../data/objects';
 import { isVisible } from '../core/reveal';
+import { objectAvailable } from '../core/rules';
 import { stamp, hm } from '../core/time';
 import { skyColor, lightsOn } from './sky';
 
@@ -26,6 +27,7 @@ export class Scene {
   private readonly feed: HTMLElement;
   private readonly pauseBtn: HTMLButtonElement;
   private feedCount = 0;
+  private readonly content: Content;
 
   constructor(
     root: HTMLElement,
@@ -43,6 +45,7 @@ export class Scene {
         <section class="bars" aria-label="状态"></section>
         <ol class="feed" aria-live="polite"></ol>
       </main>`;
+    this.content = content;
     this.room = root.querySelector('.room')!;
     this.win = root.querySelector('.window .sky')!;
     this.winTime = root.querySelector('.win-time')!;
@@ -86,7 +89,8 @@ export class Scene {
     // 固定顺序逐盏点亮，避免每帧闪烁。
     this.farLights.forEach((d, i) => d.classList.toggle('lit', (i * 7) % FAR_WINDOWS < on * FAR_WINDOWS));
 
-    for (const [id, el] of this.objs) el.classList.toggle('shown', isVisible(s, `obj:${id}`));
+    // 物件始终在场：能用时上色，不能用时灰。
+    for (const [id, el] of this.objs) el.classList.toggle('available', objectAvailable(s, this.content.actions, id));
     for (const [id, b] of this.bars) {
       b.el.classList.toggle('shown', isVisible(s, `bar:${id}`));
       b.fill.style.width = `${s.bars[id] ?? 0}%`;

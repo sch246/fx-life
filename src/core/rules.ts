@@ -30,7 +30,7 @@ export interface ActionDef {
   object: string;
   label: string;
   temper: Temper;
-  /** 做这件事的前提。不满足时按钮不可用（是否显示由显隐规则决定）。 */
+  /** 做这件事的前提。不满足时不可用。 */
   requires?: Predicate;
   /** 开始时一次性生效。 */
   onStart?: Effect;
@@ -66,6 +66,15 @@ export function blockedReason(s: GameState, a: ActionDef, lowMoodLv = 0): string
   if (s.moodLv <= lowMoodLv && a.temper === 'discipline') return 'mood';
   if (a.requires && !a.requires(s)) return 'requires';
   return null;
+}
+
+/**
+ * 物件能不能用：它身上至少有一个当前不被规则挡住的行动。
+ * 物件始终在房间里，不出现也不消失；能用时染上颜色，不能用时是灰的。
+ * 例如门上的「出门」需要自律，心情最低时被挡住，门就是灰的。这不是门的特例，是同一条规则。
+ */
+export function objectAvailable(s: GameState, actions: readonly ActionDef[], objectId: string, lowMoodLv = 0): boolean {
+  return actions.some((a) => a.object === objectId && blockedReason(s, a, lowMoodLv) === null);
 }
 
 export function startAction(s: GameState, a: ActionDef): void {

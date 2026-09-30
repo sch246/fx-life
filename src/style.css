@@ -92,14 +92,15 @@ html, body {
   border-radius: 40% 40% 12% 12%;
 }
 
-/* 显隐：所有浮现元素共用同一种淡入淡出。 */
-.obj, .bar {
+/* 显隐：状态条共用同一种淡入淡出。 */
+.bar {
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--fade) ease;
 }
-.obj.shown, .bar.shown { opacity: 1; pointer-events: auto; }
+.bar.shown { opacity: 1; pointer-events: auto; }
 
+/* 物件常驻：不能用时是灰的，能用时慢慢染上颜色。 */
 .obj {
   position: absolute;
   background: rgba(255, 255, 255, 0.06);
@@ -107,7 +108,10 @@ html, body {
   color: var(--ink);
   border-radius: 4px;
   cursor: pointer;
+  filter: grayscale(1) brightness(0.7);
+  transition: filter var(--fade) ease;
 }
+.obj.available { filter: none; }
 
 .bars { display: grid; gap: 6px; min-height: 0; }
 .bar { display: flex; align-items: center; gap: 8px; font-size: 13px; }

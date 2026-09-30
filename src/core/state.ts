@@ -73,7 +73,7 @@ export function createState(o: NewStateOptions = {}): GameState {
     items: { ...(o.items ?? {}) },
     flags: {},
     ongoing: null,
-    reveal: { visible: {}, seen: {}, queue: [], hideSince: {}, lastRevealT: -Infinity },
+    reveal: { visible: {}, seen: {}, hideSince: {} },
     feed: [],
     ledger: [],
     record: { samples: [], lastSampleT: -Infinity },

@@ -25,14 +25,13 @@ export interface Content {
   reveals: readonly RevealRule[];
 }
 
-/** 推进一游戏分钟。返回 true 表示有需要注意的事（应打断快进）。 */
-export function stepWorld(s: GameState, c: Content): boolean {
+/** 推进一游戏分钟。浮现不打断快进；将来需要打断的事件由事件规则声明。 */
+export function stepWorld(s: GameState, c: Content): void {
   s.t += 1;
   for (const b of c.bars) {
     if (b.perHour) applyEffect(s, { bars: { [b.id]: b.perHour } }, 1 / 60);
   }
   stepOngoing(s, c.actions);
-  const revealed = stepReveal(s, c.reveals);
+  stepReveal(s, c.reveals);
   stepRecord(s);
-  return revealed !== null;
 }
