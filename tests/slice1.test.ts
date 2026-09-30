@@ -1,66 +1,18 @@
 // 第一片的数值走查：用一个照顾好身体的「玩家」按正常速度过一遍，
 // 检查门在合理的时间内染上颜色，以及事情发生的顺序；再逐条检查烧水、泡面、喝水、睡觉的规则。
 import { describe, expect, it } from 'vitest';
-import type { GameState } from '../src/core/state';
 import { perform, stepWorld } from '../src/core/world';
 import { isVisible } from '../src/core/reveal';
-import { barPreview, blockedReason, keepsCurrent, objectAvailable, objectMenu, poseOf, running, stopTask, type ActionDef } from '../src/core/rules';
+import { barPreview, blockedReason, objectAvailable, objectMenu, poseOf, running, stopTask } from '../src/core/rules';
 import { learned } from '../src/core/skills';
-import { dispenserWater, hasHot, hotSource, k, w } from '../src/data/water';
+import { dispenserWater, hasHot, k, w } from '../src/data/water';
 import { NOODLES, heat, soak, stage } from '../src/data/noodles';
 import { SKILLS } from '../src/data/skills';
 import { CONTENT, DEMO_END_FLAG, newGame } from '../src/data';
-import { at, hourOf } from '../src/core/time';
+import { at } from '../src/core/time';
+import { act, carefulPlayer, lyingDown, run, tryDo } from './helpers';
 
-const act = (id: string) => CONTENT.actions.find((a) => a.id === id)!;
 const skill = (id: string) => SKILLS.find((x) => x.id === id)!;
-const lyingDown = (s: GameState) => s.ongoing?.actionId === 'lie';
-const run = (s: GameState, min: number) => {
-  for (let i = 0; i < min; i++) stepWorld(s, CONTENT);
-};
-
-function tryDo(s: GameState, a: ActionDef): boolean {
-  if ((s.ongoing && !keepsCurrent(a)) || blockedReason(s, a) !== null) return false;
-  perform(s, CONTENT, a);
-  return true;
-}
-
-/** 一个照顾身体的玩家：饿了一步步泡面、渴了喝烧开过的水、晚上睡、有消息就回、闲着看看窗外，门能用就出门。 */
-function carefulPlayer(s: GameState): void {
-  if (objectAvailable(s, CONTENT.actions, 'door')) return void tryDo(s, act('go-out'));
-  for (const a of CONTENT.actions) if (a.object === 'phone') tryDo(s, a);
-  if (s.ongoing && s.ongoing.actionId !== 'lie') return;
-  const h = hourOf(s.t);
-  const hungry = s.bars.stamina < 50;
-  const thirsty = s.bars.water < 50;
-  const st = stage(s);
-  if (st === 6) tryDo(s, act('noodle-eat'));
-  if (st === 5 && heat(s) >= 4) tryDo(s, act('noodle-open'));
-  if (st === 4) tryDo(s, act('noodle-cover'));
-  if (st === 3 || st === 4) for (const p of ['sauce', 'salt', 'veg']) tryDo(s, act(`noodle-${p}`));
-  const src = hotSource(s, NOODLES.water);
-  if (st === 3 && src && w(s, src.id, 'raw') === 0) tryDo(s, act('noodle-pour'));
-  if (st === 2) tryDo(s, act('noodle-unpack'));
-  if (st === 1) tryDo(s, act('noodle-tear'));
-  if (hungry && st === 0) tryDo(s, act('take-noodles'));
-  if (s.ongoing) return;
-  const wantCup = stage(s) >= 1 && stage(s) <= 3;
-  const wantDrink = thirsty && dispenserWater(s) < 0.25;
-  if ((wantCup || wantDrink) && !(src && w(s, src.id, 'raw') === 0) && !k(s, 'on')) {
-    if (k(s, 'water') < 0.5 || k(s, 'raw') > 0 || k(s, 'temp') < 90) {
-      if (k(s, 'water') < 1.4) return void tryDo(s, act('fill-kettle'));
-      tryDo(s, act('kettle-on'));
-    }
-  }
-  if (k(s, 'on') && k(s, 'temp') >= 100) tryDo(s, act('kettle-off'));
-  if (!wantCup && dispenserWater(s) < 0.25 && k(s, 'water') > 0 && !k(s, 'on') && k(s, 'raw') === 0) tryDo(s, act('pour-dispenser'));
-  if (thirsty && w(s, 'dispenser', 'raw') === 0) tryDo(s, act('drink'));
-  if (isVisible(s, 'bar:energy') && (h >= 22 || h < 5) && stage(s) === 0 && !k(s, 'on')) {
-    tryDo(s, act('lie'));
-    if (lyingDown(s)) perform(s, CONTENT, act('sleep'));
-  }
-  if (s.t % 90 === 0) tryDo(s, act('look'));
-}
 
 describe('第一片走查', () => {
   it('照顾好身体时，一天之内心情升到 lv1，门染上颜色，玩家出门', () => {

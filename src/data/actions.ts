@@ -6,6 +6,7 @@
 import type { ActionDef, Effect } from '../core/rules';
 import type { GameState } from '../core/state';
 import { moodLv } from '../core/rules';
+import { BODY } from './body';
 import { MESSAGES } from './messages';
 import { learned } from './skills';
 import { fallAsleepMin, roomLight, sleepQuality } from './room';
@@ -13,9 +14,22 @@ import { WATER, dispenserWater, drinkBars, fill, hotSource, k, pour, vessel, w }
 import { AUTO_NOODLES, NOODLES, NOODLE_ACTIONS, stage } from './noodles';
 
 const rested = (s: GameState) => (s.bars.energy ?? 0) >= 100;
-const starving = (s: GameState) => (s.bars.stamina ?? 0) < 15;
-/** 自然醒：睡足且房间亮了，或者饿醒。 */
-const wakeUp = (s: GameState) => (rested(s) && roomLight(s) > 0.2) || starving(s);
+const starving = (s: GameState) => (s.bars.stamina ?? 0) < BODY.hungryWake;
+/**
+ * 自然醒：睡饱了天亮就醒；没睡饱也挡不住晨光——房间够亮就先醒，不等补满。
+ * 这样熬夜欠下的觉会带进第二天，而不是在醒来前自动还清。
+ * 光源自 data/room 的 roomLight，不是写死的起床时刻：以后夜班白天补觉，只要房间够暗就行。
+ * 房间一直全暗（遮光窗帘）时，靠"躺够九小时"兜底，不会睡不醒。
+ */
+const wakeUp = (s: GameState) => {
+  const since = s.t - (s.ongoing?.start ?? s.t);
+  return (
+    (rested(s) && roomLight(s) > 0.2) ||
+    (roomLight(s) > 0.6 && (s.bars.energy ?? 0) > 30) ||
+    since >= 9 * 60 ||
+    starving(s)
+  );
+};
 
 /** 躺在床上（还没睡）：睡觉要先躺下。 */
 const lying = (s: GameState) => s.ongoing?.actionId === 'lie';
@@ -24,7 +38,9 @@ const SLEEP: Omit<ActionDef, 'id' | 'label'> = {
   object: 'bed',
   temper: 'impulse',
   requires: lying,
-  perHour: { bars: { energy: 12 } },
+  // 净增 = 这里的 14 × 睡眠质量 − 精力基线 4。夜里质量 0.9，净 +8.6/时，
+  // 约八小时正好补回一天醒着消耗；白天亮着质量低，补得慢。数值由"一夜补一天"倒推。
+  perHour: { bars: { energy: 14 } },
   rate: sleepQuality,
   stopWhen: wakeUp,
   stopLabel: '起来',
@@ -50,7 +66,8 @@ export const ACTIONS: readonly ActionDef[] = [
     object: 'bed',
     label: '躺下',
     temper: 'impulse',
-    perHour: { bars: { energy: 1.5, mood: 1 } },
+    // 净增约 +2/时（+6 − 基线 4）：白天不能睡时，躺着也能稍微歇过来一点。
+    perHour: { bars: { energy: 6, mood: 1 } },
     stopLabel: '起来',
     pose: 'lie',
   },

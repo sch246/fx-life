@@ -3,6 +3,7 @@ import { perform, stepWorld } from './core/world';
 import { blockedReason, objectAvailable, stopOngoing, stopTask, type ActionDef, type MenuEntry } from './core/rules';
 import { CONTENT, DEMO_END_FLAG, newGame } from './data';
 import { OBJECTS } from './data/objects';
+import { debugEnabled, debugText } from './core/debug';
 import { Scene } from './scene/scene';
 
 // 试玩调试用：?speed=10 让时间走快 10 倍。正式体验不带参数。
@@ -83,6 +84,12 @@ const scene = new Scene(document.getElementById('app')!, CONTENT, OBJECTS, {
   },
 });
 
+// 调试面板：?debug 打开，或按 ` 随时开关。只读状态，不进入游戏逻辑。
+const debugEl = document.createElement('pre');
+debugEl.className = 'debug-panel';
+debugEl.hidden = !debugEnabled();
+document.body.appendChild(debugEl);
+
 document.addEventListener('keydown', (e) => {
   if (e.code === 'Space' && !endedText && started) {
     e.preventDefault();
@@ -90,6 +97,7 @@ document.addEventListener('keydown', (e) => {
   }
   // Esc：先合上近景，再放下没固定的手机。
   if (e.code === 'Escape') scene.closeView();
+  if (e.code === 'Backquote') debugEl.hidden = !debugEl.hidden;
 });
 
 let last = performance.now();
@@ -103,6 +111,7 @@ function frame(now: number) {
     endedText = `现实用时 ${Math.round((now - startedAt) / 60000)} 分钟`;
   }
   scene.render(state, clock.paused, clock.fastForward, endedText, !started);
+  if (!debugEl.hidden) debugEl.textContent = debugText(state, clock.paused);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

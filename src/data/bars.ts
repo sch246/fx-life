@@ -1,24 +1,21 @@
-// 状态条数据表。心情是主线，一开始就显示；其他条开局隐藏，何时浮现由 data/reveals 里 id 为 `bar:<id>` 的规则决定。
-// 身体模型的快慢两层（交接稿「身体模型」），全部用同一条规则写：
-// - 快变量：体力靠吃饭即时补，水分靠喝水补，精力只有睡觉能补。
-// - 慢变量：心情和体能分级。条满升一级、见底降一级；
-//   体能只被快变量在一段时间里的状况推动：透支时很快往下掉，吃好睡好要好几天才攒满一级。
+// 状态条数据表。心情是主线，一开始就显示；其他条何时浮现由 data/reveals 里 id 为 `bar:<id>` 的规则决定。
+// 身体模型的阈值、后果和浮现带都在 data/body.ts，这里只声明每根条的形状和初值。
+// 快慢两层：快变量（体力/水分/精力）随行动即时变化；慢变量（心情/体能）分级，由快变量在一段时间里的状况推动。
 // 数值是第一版初值，按试玩调。
 
-import type { GameState } from '../core/state';
 import type { BarDef } from '../core/world';
-import { moodLv } from '../core/rules';
+import { EFFECTS } from './body';
 import { MOOD_STYLES, START_MOOD_LV } from './mood';
 
-const bar = (s: GameState, id: string) => s.bars[id] ?? 0;
-const lv = (s: GameState, id: string) => s.levels[id] ?? 0;
-const fedAndRested = (s: GameState) => bar(s, 'stamina') >= 40 && bar(s, 'energy') >= 40 && bar(s, 'water') >= 40;
+/** 从 body 的后果表派生这根条的 drift，drift 只在这里出现一次。 */
+const drift = (id: string) => EFFECTS.filter((e) => e.bar === id).map((e) => ({ when: e.when, perHour: e.perHour }));
 
 export const BARS: readonly BarDef[] = [
   {
     id: 'stamina',
     name: '体力',
-    initial: 62,
+    // 开局刚到这座城市、还没吃饭：刚好落在 40 的第一后果带里，饿会自己浮现。
+    initial: 38,
     perHour: -4,
   },
   {
@@ -32,26 +29,13 @@ export const BARS: readonly BarDef[] = [
     name: '精力',
     initial: 97,
     perHour: -4,
-    drift: [
-      // 体能决定精力掉得多快。
-      { when: (s) => lv(s, 'fitness') <= 1, perHour: -1 },
-      { when: (s) => lv(s, 'fitness') === 0, perHour: -1.5 },
-      { when: (s) => lv(s, 'fitness') >= 3, perHour: 0.8 },
-    ],
+    drift: drift('energy'),
   },
   {
     id: 'mood',
     name: '心情',
     initial: 5,
-    drift: [
-      // 在 lv0，什么都不做心情也会缓慢回升。lv1 以上暂不自然变化（唯一稳定点放在哪一级待定）。
-      { when: (s) => moodLv(s) === 0, perHour: 1.7 },
-      // 吃饱睡足回升得更快；饿着或累垮会往下掉。
-      { when: fedAndRested, perHour: 1.5 },
-      { when: (s) => bar(s, 'stamina') < 20, perHour: -4 },
-      { when: (s) => bar(s, 'energy') < 15, perHour: -4 },
-      { when: (s) => bar(s, 'water') < 20, perHour: -3 },
-    ],
+    drift: drift('mood'),
     levels: {
       start: START_MOOD_LV,
       max: 4,
@@ -66,14 +50,7 @@ export const BARS: readonly BarDef[] = [
     id: 'fitness',
     name: '体能',
     initial: 50,
-    drift: [
-      // 透支：饿空了或累垮了还在撑。
-      { when: (s) => bar(s, 'stamina') < 10, perHour: -20 },
-      { when: (s) => bar(s, 'energy') < 10, perHour: -20 },
-      { when: (s) => bar(s, 'water') < 10, perHour: -20 },
-      // 吃好睡好，慢慢攒回来：从见底到满要四五天。
-      { when: fedAndRested, perHour: 1 },
-    ],
+    drift: drift('fitness'),
     levels: {
       start: 2,
       max: 4,
