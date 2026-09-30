@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createState } from '../src/core/state';
-import { REVEAL_GAP_MIN, isVisible, stepReveal, type RevealRule } from '../src/core/reveal';
+import { isVisible, stepReveal, type RevealRule } from '../src/core/reveal';
 
 const tick = (s: ReturnType<typeof createState>, rules: RevealRule[], n = 1) => {
   for (let i = 0; i < n; i++) {
@@ -48,42 +48,14 @@ describe('显隐', () => {
     expect(isVisible(s, 'bar:e')).toBe(false);
   });
 
-  it('首次浮现的新元素按焦点排队，不同时争夺注意力', () => {
+  it('没有焦点队列：同时满足条件的元素同时浮现', () => {
     const s = createState();
     const rules: RevealRule[] = [
       { id: 'a', showWhen: () => true },
       { id: 'b', showWhen: () => true },
     ];
     tick(s, rules);
-    expect([isVisible(s, 'a'), isVisible(s, 'b')]).toEqual([true, false]);
-    tick(s, rules, REVEAL_GAP_MIN - 1);
-    expect(isVisible(s, 'b')).toBe(false);
-    tick(s, rules);
-    expect(isVisible(s, 'b')).toBe(true);
-  });
-
-  it('焦点安排不是数量禁令：见过的元素再浮现、focus: false 的元素都不排队', () => {
-    const s = createState();
-    let hungry = false;
-    const rules: RevealRule[] = [
-      { id: 'a', showWhen: () => true },
-      { id: 'bar:energy', showWhen: () => true, focus: false },
-      { id: 'bar:hunger', showWhen: () => hungry, hideWhen: () => !hungry },
-      { id: 'b', showWhen: () => true },
-    ];
-    s.reveal.seen['bar:hunger'] = true;
-    hungry = true;
-    tick(s, rules);
-    expect(['a', 'bar:energy', 'bar:hunger', 'b'].map((id) => isVisible(s, id))).toEqual([true, true, true, false]);
-  });
-
-  it('返回本分钟浮现的元素', () => {
-    const s = createState();
-    s.t += 1;
-    expect(stepReveal(s, [{ id: 'a', showWhen: () => true }, { id: 'q', showWhen: () => true, focus: false }])).toEqual([
-      'q',
-      'a',
-    ]);
+    expect([isVisible(s, 'a'), isVisible(s, 'b')]).toEqual([true, true]);
   });
 
   it('没有消失条件的能力一直留着；依赖可失去条件的随条件消失', () => {
@@ -92,24 +64,10 @@ describe('显隐', () => {
       { id: 'act:look', showWhen: (x) => x.moodLv >= 1 },
       { id: 'act:skip', showWhen: (x) => x.moodLv >= 1, hideWhen: (x) => x.moodLv < 1 },
     ];
-    tick(s, rules, REVEAL_GAP_MIN + 1);
+    tick(s, rules);
     expect([isVisible(s, 'act:look'), isVisible(s, 'act:skip')]).toEqual([true, true]);
     s.moodLv = 0;
     tick(s, rules);
     expect([isVisible(s, 'act:look'), isVisible(s, 'act:skip')]).toEqual([true, false]);
-  });
-
-  it('条件不再成立的排队项被丢弃', () => {
-    const s = createState();
-    let want = true;
-    const rules: RevealRule[] = [
-      { id: 'a', showWhen: () => true },
-      { id: 'b', showWhen: () => want },
-    ];
-    tick(s, rules);
-    want = false;
-    tick(s, rules, REVEAL_GAP_MIN + 1);
-    expect(isVisible(s, 'b')).toBe(false);
-    expect(s.reveal.queue).toEqual([]);
   });
 });
