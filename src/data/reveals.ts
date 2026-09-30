@@ -4,6 +4,7 @@
 
 import type { RevealRule } from '../core/reveal';
 import { moodLv } from '../core/rules';
+import { learned } from './skills';
 
 export const REVEALS: readonly RevealRule[] = [
   {
@@ -21,6 +22,13 @@ export const REVEALS: readonly RevealRule[] = [
     firstLine: '肚子饿了。箱子里还带着几桶面。',
   },
   {
+    id: 'bar:water',
+    showWhen: (s) => s.bars.water < 45,
+    hideWhen: (s) => s.bars.water >= 80,
+    holdMinutes: 20,
+    firstLine: '口渴了。',
+  },
+  {
     // 心情不会一直显示：接近升级或降级时浮现，变化过去后淡出。
     id: 'bar:mood',
     showWhen: (s) => s.bars.mood >= 75 || (moodLv(s) > 0 && s.bars.mood <= 25),
@@ -34,6 +42,9 @@ export const REVEALS: readonly RevealRule[] = [
     hideWhen: (s) => s.bars.fitness > 30 && s.bars.fitness < 80,
     holdMinutes: 120,
   },
+  // 手动做成功够次数（data/skills），就会了：出现「自动」。会了就一直会。
+  { id: 'act:auto-boil', showWhen: (s) => learned(s, 'boil') },
+  { id: 'act:auto-noodles', showWhen: (s) => learned(s, 'soak') },
   // 升到 lv1 后浮现的新动作。发现后一直留着。
   { id: 'act:unpack', showWhen: (s) => moodLv(s) >= 1 },
   // 睡眠跳过依赖可失去的条件：掉回 lv0 就消失。

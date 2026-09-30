@@ -18,7 +18,9 @@ export const OBJECTS: readonly ObjectDef[] = [
   { id: 'window', name: '窗户', x: 50, y: 10, w: 30, h: 40 },
   { id: 'bed', name: '床', x: 3, y: 56, w: 32, h: 26 },
   { id: 'phone', name: '手机', x: 25, y: 59, w: 3.2, h: 4.5, view: 'screen' },
-  { id: 'kettle', name: '水壶', x: 40.5, y: 55.5, w: 4.5, h: 7 },
+  { id: 'table', name: '小桌', x: 38, y: 62, w: 11, h: 16 },
+  { id: 'kettle', name: '水壶', x: 39.5, y: 55.5, w: 4.5, h: 7, view: 'closeup' },
+  { id: 'dispenser', name: '饮水机', x: 70, y: 46, w: 7, h: 32 },
   { id: 'bag', name: '行李箱', x: 58, y: 56, w: 9, h: 26, view: 'closeup' },
   { id: 'door', name: '门', x: 86, y: 22, w: 10, h: 50 },
 ];

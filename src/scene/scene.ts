@@ -12,6 +12,7 @@ import { barPreview, blockedReason, objectAvailable } from '../core/rules';
 import { daylight, stamp, hm } from '../core/time';
 import { ITEM_NAMES } from '../data/items';
 import { MESSAGES } from '../data/messages';
+import { DISPENSER, KETTLE, k, soaking } from '../data/kettle';
 import { CityView } from './window';
 
 export interface SceneIntents {
@@ -39,6 +40,9 @@ export class Scene {
   private readonly sunPatch: HTMLElement;
   private readonly character: HTMLElement;
   private readonly heldCup: HTMLElement;
+  private readonly soakCup: HTMLElement;
+  private readonly kettleFx: HTMLElement;
+  private readonly dispWater: HTMLElement;
   private readonly menu: HTMLElement;
   private readonly status: HTMLElement;
   private readonly closeup: HTMLElement;
@@ -74,8 +78,10 @@ export class Scene {
           <div class="floor"></div>
           <div class="sun-patch"></div>
           <div class="window"><canvas class="city"></canvas><span class="win-time"></span></div>
-          <div class="deco-table"></div>
           <div class="held-cup" hidden></div>
+          <div class="soak-cup" hidden><i class="steam"></i></div>
+          <div class="kettle-fx"><i class="glow"></i><i class="steam"></i></div>
+          <div class="disp-water"></div>
           <button class="character" type="button" aria-label="角色"><i class="head"></i><i class="body"></i></button>
           <div class="dim"></div>
           <div class="menu" role="menu" hidden></div>
@@ -99,6 +105,9 @@ export class Scene {
     this.sunPatch = $('.sun-patch');
     this.character = $('.character');
     this.heldCup = $('.held-cup');
+    this.soakCup = $('.soak-cup');
+    this.kettleFx = $('.kettle-fx');
+    this.dispWater = $('.disp-water');
     this.menu = $('.menu');
     this.status = $('.status');
     this.closeup = $('.closeup');
@@ -226,6 +235,7 @@ export class Scene {
   }
 
   private renderCloseup(s: GameState): void {
+    if (this.view?.id === 'kettle') return this.renderKettle(s);
     const n = s.items.noodles ?? 0;
     const take = this.canDo(s, 'take-noodles');
     const key = `bag|${n}|${take}|${this.shown(s, 'unpack')}|${this.canDo(s, 'unpack')}|${s.items.cup ?? 0}`;
@@ -247,6 +257,34 @@ export class Scene {
       </div>
       ${hint}
       <button type="button" class="cu-close" data-close>合上箱子</button>`;
+  }
+
+  /** 水壶近景：左边是水壶（水位、红晕、气泡、白气），右边是能做的事。 */
+  private renderKettle(s: GameState): void {
+    const acts = this.content.actions.filter((a) => a.object === 'kettle' && this.shown(s, a.id));
+    const key = `kettle|${acts.map((a) => `${a.id}:${this.canDo(s, a.id)}`).join()}`;
+    if (key !== this.lastViewKey) {
+      this.lastViewKey = key;
+      const btns = acts
+        .map((a) => `<button type="button" class="kv-btn${a.auto ? ' auto' : ''}" data-act="${a.id}" ${this.canDo(s, a.id) ? '' : 'disabled'}>${esc(a.label)}</button>`)
+        .join('');
+      this.closeup.innerHTML = `
+        <div class="kv">
+          <div class="kv-kettle"><div class="kv-body"><i class="kv-water"></i><i class="kv-glow"></i><i class="kv-bubbles"></i></div><i class="kv-lid"></i><i class="kv-handle"></i><i class="kv-spout"></i><i class="kv-led"></i><i class="kv-steam"></i></div>
+          <div class="kv-side">${btns}<button type="button" class="cu-close" data-close>走开</button></div>
+        </div>`;
+    }
+    // 水位、温度、开关这些每分钟都在变，直接改样式，不重建按钮。
+    const el = this.closeup.querySelector<HTMLElement>('.kv-kettle');
+    if (!el) return;
+    const temp = k(s, 'temp');
+    const on = !!k(s, 'on');
+    el.style.setProperty('--level', String(k(s, 'water') / KETTLE.capacity));
+    el.style.setProperty('--heat', String(Math.max(0, (temp - 55) / 45)));
+    el.classList.toggle('on', on);
+    el.classList.toggle('bubbling', on && k(s, 'water') > 0 && temp >= 80);
+    el.classList.toggle('steaming', k(s, 'water') > 0 && temp >= 95);
+    el.classList.toggle('broken', !!k(s, 'broken'));
   }
 
   private renderPhone(s: GameState): void {
@@ -302,6 +340,11 @@ export class Scene {
     const unread = MESSAGES.some((m) => s.flags[`msg:${m.id}`] && !s.flags[`replied:${m.id}`]);
     this.objs.get('phone')?.classList.toggle('ping', unread && !s.ongoing?.occupies);
     this.heldCup.hidden = !((s.items.cup ?? 0) > 0);
+    this.soakCup.hidden = !soaking(s);
+    const temp = k(s, 'temp');
+    this.kettleFx.style.setProperty('--heat', String(k(s, 'water') > 0 ? Math.max(0, (temp - 55) / 45) : 0));
+    this.kettleFx.classList.toggle('steaming', k(s, 'water') > 0 && temp >= 95);
+    this.dispWater.style.setProperty('--level', String((s.things['dispenser.water'] ?? 0) / DISPENSER.capacity));
 
     const cur = s.ongoing && this.actions.get(s.ongoing.actionId);
     this.character.dataset.pose = cur?.pose ?? '';

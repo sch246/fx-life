@@ -18,7 +18,15 @@ export interface Effect {
   items?: Record<string, number>;
   /** 记下发生过的事。 */
   flags?: readonly string[];
+  /** 物件状态的增减，键是「物件.属性」（例如 kettle.water）。 */
+  things?: Record<string, number>;
+  /** 物件状态直接设成某个值（例如开关、泡上面的时刻）。 */
+  set?: Record<string, number>;
 }
+
+/** 效果可以是固定的一组变化，也可以按当下的状态算出来（例如接水后的水温、面泡了多久）。 */
+export type EffectLike = Effect | ((s: GameState) => Effect);
+export const resolve = (s: GameState, e: EffectLike | undefined): Effect | undefined => (typeof e === 'function' ? e(s) : e);
 
 /** 行动在心情低时是否被锁：需要自律的会锁，冲动的和兜底的始终开着。 */
 export type Temper = 'discipline' | 'impulse' | 'always';
@@ -35,7 +43,7 @@ export interface ActionDef {
   /** 做这件事的前提。不满足时不可用。 */
   requires?: Predicate;
   /** 开始时一次性生效。 */
-  onStart?: Effect;
+  onStart?: EffectLike;
   /** 持续期间每游戏小时的变化，按分钟摊开结算。 */
   perHour?: Effect;
   /** 持续变化的倍率，读当下的条件（例如房间的光和声影响睡眠）。省略为 1。 */
@@ -45,12 +53,12 @@ export interface ActionDef {
   /** 持续型行动自然结束的条件（例如睡足且天亮）。 */
   stopWhen?: Predicate;
   /** 结束时一次性生效（固定耗时做完，或 stopWhen 成立）。 */
-  onEnd?: Effect;
+  onEnd?: EffectLike;
   /** 账本里的说明与分类。 */
   reason?: string;
   cat?: string;
   /** 开始时写进事件流的话。 */
-  line?: string;
+  line?: string | ((s: GameState) => string);
   /** 自然结束时写进事件流的话。 */
   endLine?: string;
   /** 手动停止时菜单里显示的字。 */
@@ -61,6 +69,8 @@ export interface ActionDef {
   pose?: string;
   /** 身体被这件事占住（例如睡着）：做它的时候别的事都做不了，只能先停下它。 */
   occupies?: boolean;
+  /** 自动：小人自己把这件事做完，玩家不用盯着。通常在手动做熟之后才出现。 */
+  auto?: boolean;
 }
 
 export const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
@@ -71,6 +81,8 @@ export function applyEffect(s: GameState, e: Effect, k = 1, reason = '', cat = '
   if (e.accum) for (const [id, dv] of Object.entries(e.accum)) s.accum[id] = (s.accum[id] ?? 0) + dv * k;
   if (e.items) for (const [id, dv] of Object.entries(e.items)) s.items[id] = Math.max(0, (s.items[id] ?? 0) + dv * k);
   if (e.flags) for (const f of e.flags) s.flags[f] = true;
+  if (e.things) for (const [id, dv] of Object.entries(e.things)) s.things[id] = Math.max(0, (s.things[id] ?? 0) + dv * k);
+  if (e.set) for (const [id, v] of Object.entries(e.set)) s.things[id] = v;
   if (e.money) {
     const amount = e.money * k;
     s.money += amount;
@@ -113,19 +125,24 @@ const isOngoing = (a: ActionDef) => !!(a.perHour || a.minutes || a.stopWhen);
 
 export function startAction(s: GameState, a: ActionDef): void {
   if (s.ongoing) stopOngoing(s);
-  if (a.onStart) applyEffect(s, a.onStart, 1, a.reason ?? a.label, a.cat);
-  if (a.line) say(s, a.line);
+  // 先按开始前的状态定下这句话（例如面泡了多久），再生效。
+  const line = typeof a.line === 'function' ? a.line(s) : a.line;
+  const start = resolve(s, a.onStart);
+  if (start) applyEffect(s, start, 1, a.reason ?? a.label, a.cat);
+  if (line) say(s, line);
   if (isOngoing(a)) {
     s.ongoing = { actionId: a.id, start: s.t, until: a.minutes === undefined ? undefined : s.t + a.minutes };
     if (a.occupies) s.ongoing.occupies = true;
-  } else if (a.onEnd) {
-    applyEffect(s, a.onEnd, 1, a.reason ?? a.label, a.cat);
+  } else {
+    const end = resolve(s, a.onEnd);
+    if (end) applyEffect(s, end, 1, a.reason ?? a.label, a.cat);
   }
 }
 
 function finish(s: GameState, a: ActionDef): void {
   s.ongoing = null;
-  if (a.onEnd) applyEffect(s, a.onEnd, 1, a.reason ?? a.label, a.cat);
+  const end = resolve(s, a.onEnd);
+  if (end) applyEffect(s, end, 1, a.reason ?? a.label, a.cat);
   if (a.endLine) say(s, a.endLine);
 }
 
@@ -196,6 +213,7 @@ export function objectMenu(
 export function barPreview(a: ActionDef): Record<string, 1 | -1> {
   const out: Record<string, 1 | -1> = {};
   for (const e of [a.onStart, a.perHour, a.onEnd]) {
+    if (typeof e === 'function') continue;
     for (const [id, dv] of Object.entries(e?.bars ?? {})) if (dv) out[id] = dv > 0 ? 1 : -1;
   }
   return out;

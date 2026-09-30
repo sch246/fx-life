@@ -1,7 +1,7 @@
 import { Clock } from './core/clock';
-import { stepWorld } from './core/world';
+import { perform, stepWorld } from './core/world';
 import { isVisible } from './core/reveal';
-import { blockedReason, objectAvailable, objectMenu, startAction, stopOngoing, type ActionDef, type MenuEntry } from './core/rules';
+import { blockedReason, objectAvailable, objectMenu, stopOngoing, type ActionDef, type MenuEntry } from './core/rules';
 import { CONTENT, DEMO_END_FLAG, newGame } from './data';
 import { OBJECTS } from './data/objects';
 import { Scene } from './scene/scene';
@@ -21,7 +21,7 @@ const actionVisible = (id: string) => !gated.has(`act:${id}`) || isVisible(state
 function begin(a: ActionDef): void {
   if (clock.paused || blockedReason(state, a) !== null) return;
   clock.interrupt();
-  startAction(state, a);
+  perform(state, CONTENT, a);
   if (a.skip) clock.setFastForward(true);
 }
 
@@ -56,9 +56,9 @@ const scene = new Scene(document.getElementById('app')!, CONTENT, OBJECTS, {
     const a = CONTENT.actions.find((x) => x.id === id);
     if (!a) return;
     begin(a);
-    // 在近景里开始一件要花时间的事（整理行李），就合上近景去做。
+    // 在近景里开始一件要占住人的事（整理行李、守着水壶），就合上近景去做。
     const view = OBJECTS.find((o) => o.id === a.object)?.view;
-    if (view === 'closeup' && state.ongoing?.actionId === a.id) scene.closeView();
+    if (view === 'closeup' && state.ongoing?.actionId === a.id && ((a.minutes ?? 0) > 1 || a.auto)) scene.closeView();
   },
   restart: () => location.reload(),
 });

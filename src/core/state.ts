@@ -44,6 +44,10 @@ export interface GameState {
   items: Record<string, number>;
   /** 一次性标记：发生过的事、已发出的消息等。 */
   flags: Record<string, true>;
+  /** 物件自己的状态（水壶里的水和温度、桌上泡着的面……），键是「物件.属性」。 */
+  things: Record<string, number>;
+  /** 各行动上一次给「手动」心情的时间，防止反复点同一件事刷心情。 */
+  cooldowns: Record<string, number>;
   ongoing: Ongoing | null;
   reveal: RevealState;
   feed: FeedLine[];
@@ -59,6 +63,7 @@ export interface NewStateOptions {
   levels?: Record<string, number>;
   money?: number;
   items?: Record<string, number>;
+  things?: Record<string, number>;
 }
 
 export function createState(o: NewStateOptions = {}): GameState {
@@ -74,6 +79,8 @@ export function createState(o: NewStateOptions = {}): GameState {
     accum: {},
     items: { ...(o.items ?? {}) },
     flags: {},
+    things: { ...(o.things ?? {}) },
+    cooldowns: {},
     ongoing: null,
     reveal: { visible: {}, seen: {}, hideSince: {} },
     feed: [],

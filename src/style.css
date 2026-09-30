@@ -115,15 +115,6 @@ html, body {
   color: rgba(255, 255, 255, 0.55);
   font-variant-numeric: tabular-nums;
 }
-.deco-table {
-  position: absolute;
-  left: 38%;
-  top: 62%;
-  width: 10%;
-  height: 16%;
-  background: linear-gradient(#7a5c40 0 14%, transparent 14%), linear-gradient(90deg, transparent 8%, #5a432e 8% 16%, transparent 16% 84%, #5a432e 84% 92%, transparent 92%);
-}
-
 /* ---------- 物件：常驻，不能用时灰，能用时慢慢染上颜色 ---------- */
 
 .obj {
@@ -209,11 +200,105 @@ html, body {
 }
 .obj-door::after { content: ''; position: absolute; left: 12%; top: 52%; width: 11%; aspect-ratio: 1; border-radius: 50%; background: #d8b46a; }
 
+
+.obj-table {
+  background:
+    linear-gradient(#7a5c40 0 14%, transparent 14%),
+    linear-gradient(90deg, transparent 8%, #5a432e 8% 16%, transparent 16% 84%, #5a432e 84% 92%, transparent 92%);
+}
+.obj-dispenser {
+  border-radius: 4px;
+  background:
+    linear-gradient(transparent 0 38%, #d9dde2 38%) ,
+    linear-gradient(90deg, transparent 22%, rgba(170, 205, 235, 0.35) 22% 78%, transparent 78%) 0 0 / 100% 36% no-repeat;
+}
+.obj-dispenser::after { content: ''; position: absolute; left: 38%; top: 58%; width: 24%; height: 6%; background: #5b6572; border-radius: 2px; }
+/* 饮水机顶上水桶里的水位。 */
+.disp-water {
+  --level: 0;
+  position: absolute;
+  left: calc(70% + 7% * 0.22);
+  width: calc(7% * 0.56);
+  top: calc(46% + 32% * 0.36 * (1 - var(--level)));
+  height: calc(32% * 0.36 * var(--level));
+  background: rgba(120, 180, 230, 0.75);
+  pointer-events: none;
+  z-index: 3;
+}
+.soak-cup {
+  position: absolute;
+  left: 45.2%;
+  top: 57.2%;
+  width: 2.6%;
+  height: 4.8%;
+  background: linear-gradient(#e9dcc2 0 20%, #c8412f 20% 70%, #f3efe6 70%);
+  border-radius: 2px 2px 4px 4px;
+  z-index: 3;
+  pointer-events: none;
+}
+.kettle-fx { --heat: 0; position: absolute; left: 39.5%; top: 55.5%; width: 4.5%; height: 7%; pointer-events: none; z-index: 5; }
+.kettle-fx .glow { position: absolute; inset: 30% 10% 5%; border-radius: 40%; background: radial-gradient(#ff5a3c, transparent 70%); opacity: calc(var(--heat) * 0.8); }
+.steam {
+  position: absolute;
+  left: 30%;
+  bottom: 100%;
+  width: 40%;
+  height: 120%;
+  background: radial-gradient(ellipse at 50% 80%, rgba(240, 240, 240, 0.55), transparent 65%);
+  opacity: 0;
+  filter: blur(2px);
+}
+.kettle-fx.steaming .steam, .soak-cup .steam { animation: steam 2.2s ease-out infinite; }
+@keyframes steam { 0% { opacity: 0; transform: translateY(20%) scaleX(0.7); } 40% { opacity: 1; } 100% { opacity: 0; transform: translateY(-60%) scaleX(1.3); } }
+.character[data-pose="kettle"] { left: 34%; top: 43%; }
+
+/* 水壶近景：左边是水壶，右边是能做的事。 */
+.kv { width: min(100%, 640px); height: 86%; display: grid; grid-template-columns: 1.2fr 1fr; gap: 6%; align-items: center; }
+.kv-kettle { --level: 0; --heat: 0; position: relative; height: 78%; aspect-ratio: 1 / 1.05; max-width: 100%; justify-self: center; }
+.kv-body {
+  position: absolute;
+  inset: 18% 12% 0 8%;
+  border-radius: 42% 42% 16% 16%;
+  background: linear-gradient(90deg, #aeb4bd, #eceff3 42%, #9aa1ab);
+  overflow: hidden;
+}
+/* 壶身上的透明水位窗。 */
+.kv-water { position: absolute; left: 12%; width: 10%; bottom: 10%; height: 70%; border-radius: 6px; background: linear-gradient(transparent calc((1 - var(--level)) * 100%), rgba(110, 170, 225, 0.85) 0); box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.2); }
+.kv-glow { position: absolute; inset: 35% 10% 0; background: radial-gradient(ellipse at 50% 80%, #ff4b2f, transparent 70%); opacity: calc(var(--heat) * 0.75); }
+.kv-bubbles { position: absolute; left: 12%; width: 10%; bottom: 10%; height: calc(70% * var(--level)); opacity: 0; background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 18%, transparent 22%) 0 0 / 100% 18%; }
+.kv-kettle.bubbling .kv-bubbles { opacity: 1; animation: bubbles 0.6s linear infinite; }
+@keyframes bubbles { to { background-position: 0 -18%; } }
+.kv-lid { position: absolute; left: 30%; top: 12%; width: 36%; height: 9%; border-radius: 50% 50% 10% 10%; background: #c9ced5; }
+.kv-handle { position: absolute; right: 0; top: 26%; width: 16%; height: 46%; border: 10px solid #3b3f46; border-left: 0; border-radius: 0 40% 40% 0; }
+.kv-spout { position: absolute; left: -6%; top: 30%; width: 18%; height: 10%; background: #b6bcc4; transform: rotate(-28deg); border-radius: 4px; }
+.kv-led { position: absolute; right: 6%; bottom: 8%; width: 5%; aspect-ratio: 1; border-radius: 50%; background: #3b2020; }
+.kv-kettle.on .kv-led { background: #ff4b3a; box-shadow: 0 0 8px #ff4b3a; }
+.kv-steam { position: absolute; left: -18%; top: -30%; width: 40%; height: 60%; opacity: 0; background: radial-gradient(ellipse at 60% 90%, rgba(245, 245, 245, 0.7), transparent 65%); filter: blur(3px); }
+.kv-kettle.steaming .kv-steam { animation: steam 1.6s ease-out infinite; }
+.kv-kettle.broken .kv-body { background: linear-gradient(90deg, #6d6a66, #8e8983 42%, #5f5b57); }
+.kv-kettle.broken .kv-body::after { content: ''; position: absolute; left: 30%; right: 30%; bottom: 0; height: 30%; background: radial-gradient(#1a1614, transparent 70%); }
+.kv-side { display: grid; gap: 8px; align-content: center; }
+.kv-btn {
+  background: #2a2d34;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.kv-btn:hover:not(:disabled) { background: #343842; }
+.kv-btn:disabled { color: #5d5b57; cursor: default; }
+.kv-btn.auto { border-color: #5a7a5f; }
+@media (max-width: 520px) { .kv { grid-template-columns: 1fr; height: auto; } .kv-kettle { height: 34vw; } }
+
 /* ---------- 角色 ---------- */
 
 .character {
   position: absolute;
-  left: 46%;
+  left: 51.5%;
   top: 43%;
   width: 5%;
   height: 29%;

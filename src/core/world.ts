@@ -2,9 +2,9 @@
 // 时钟每推进一分钟调用一次 stepWorld；正常速度和快进走完全相同的路径。
 
 import type { GameState } from './state';
-import type { ActionDef, CueDef, Predicate } from './rules';
+import type { ActionDef, CueDef, Effect, Predicate } from './rules';
 import type { RevealRule } from './reveal';
-import { applyEffect, stepCues, stepOngoing } from './rules';
+import { applyEffect, startAction, stepCues, stepOngoing } from './rules';
 import { stepReveal } from './reveal';
 import { stepRecord } from './record';
 import { say } from './feed';
@@ -45,12 +45,40 @@ export interface BarDef {
   initial: number;
 }
 
+/**
+ * 物件自己的物理过程：水壶加热、水慢慢变凉、烧干。
+ * 它们和小人在做什么无关，每游戏分钟照常推进，只读写 state.things 和事件流。
+ */
+export interface ProcessDef {
+  id: string;
+  step: (s: GameState) => void;
+}
+
+/** 亲手做事的一点满足感：非自动的行动开始时生效，同一件事隔一段时间才再给一次。 */
+export interface ManualBonus {
+  effect: Effect;
+  cooldownMin: number;
+}
+
 /** 一局游戏用到的全部内容表。 */
 export interface Content {
   bars: readonly BarDef[];
   actions: readonly ActionDef[];
   reveals: readonly RevealRule[];
   cues?: readonly CueDef[];
+  processes?: readonly ProcessDef[];
+  manualBonus?: ManualBonus;
+}
+
+/** 玩家发起一件事：开始它，手动做的再给一点心情。 */
+export function perform(s: GameState, c: Content, a: ActionDef): void {
+  startAction(s, a);
+  const b = c.manualBonus;
+  if (!b || a.auto) return;
+  const last = s.cooldowns[a.id];
+  if (last !== undefined && s.t - last < b.cooldownMin) return;
+  s.cooldowns[a.id] = s.t;
+  applyEffect(s, b.effect);
 }
 
 function stepLevels(s: GameState, b: BarDef): void {
@@ -82,6 +110,7 @@ export function stepWorld(s: GameState, c: Content): void {
     if (dv) delta[b.id] = dv;
   }
   applyEffect(s, { bars: delta }, 1 / 60);
+  for (const p of c.processes ?? []) p.step(s);
   stepOngoing(s, c.actions);
   for (const b of c.bars) stepLevels(s, b);
   stepCues(s, c.cues ?? []);
